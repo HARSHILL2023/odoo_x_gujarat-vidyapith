@@ -1,22 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import {
-    BarChart3,
-    TrendingUp,
-    Fuel,
-    Settings as Tools,
-    DollarSign,
-    Medal,
-    Info,
-    ChevronDown
-} from 'lucide-react';
-import SkeletonTable from '@/components/SkeletonTable';
-import useCountUp from '@/hooks/useCountUp';
-import { showToast } from '@/hooks/useToast';
-import vehicleService from '@/services/vehicleService';
-import driverService from '@/services/driverService';
-import tripService from '@/services/tripService';
-import maintenanceService from '@/services/maintenanceService';
-import fuelService from '@/services/fuelService';
+import { useState, useEffect } from 'react';
+import vehicleService from '../services/vehicleService';
+import driverService from '../services/driverService';
+import tripService from '../services/tripService';
+import maintenanceService from '../services/maintenanceService';
+import fuelService from '../services/fuelService';
 
 export default function Analytics() {
     const [vehicles, setVehicles] = useState([]);
@@ -32,161 +19,257 @@ export default function Analytics() {
 
     const fetchData = async () => {
         try {
-            const [v, d, t, m, f] = await Promise.all([
+            const [vehiclesData, driversData, tripsData, maintenanceData, fuelData] = await Promise.all([
                 vehicleService.getAll(),
                 driverService.getAll(),
                 tripService.getAll(),
                 maintenanceService.getAll(),
                 fuelService.getAll()
             ]);
-            setVehicles(v || []);
-            setDrivers(d || []);
-            setTrips(t || []);
-            setMaintenance(m || []);
-            setFuelLogs(f || []);
-        } catch {
-            showToast('Data aggregation failed', 'error');
+            setVehicles(vehiclesData);
+            setDrivers(driversData);
+            setTrips(tripsData);
+            setMaintenance(maintenanceData);
+            setFuelLogs(fuelData);
+        } catch (error) {
+            console.error('Error fetching analytics data:', error);
         } finally {
             setLoading(false);
         }
     };
 
-    const roiData = useMemo(() => {
-        const acquisition_cost = 50000;
-        return vehicles.map(v => {
-            const vId = String(v._id || v.id);
-            const vTrips = trips.filter(t => String(t.vehicle_id?._id || t.vehicle_id?.id || t.vehicle_id) === vId && t.status === 'completed');
-            const revenue = vTrips.length * 850;
-            const fuelCost = fuelLogs.filter(f => String(f.vehicle_id?._id || f.vehicle_id?.id || f.vehicle_id) === vId).reduce((s, f) => s + (f.cost || 0), 0);
-            const maintCost = maintenance.filter(m => String(m.vehicle_id?._id || m.vehicle_id?.id || m.vehicle_id) === vId).reduce((s, m) => s + (m.cost || 0), 0);
-            const opCost = fuelCost + maintCost;
-            const roi = ((revenue - opCost) / acquisition_cost) * 100;
-            return { ...v, roi, revenue, opCost };
-        }).sort((a, b) => b.roi - a.roi);
-    }, [vehicles, trips, fuelLogs, maintenance]);
+    const completedTrips = trips.filter(t => t.status === 'Completed');
 
-    const heatmapData = useMemo(() => {
-        // Last 8 weeks
-        const weeks = Array.from({ length: 8 }).map((_, i) => {
-            const d = new Date();
-            d.setDate(d.getDate() - (i * 7));
-            return { start: new Date(d.setDate(d.getDate() - d.getDay())), end: new Date(d.setDate(d.getDate() - d.getDay() + 6)) };
-        }).reverse();
+    // Fuel efficiency: km / L per vehicle
+    const fuelEfficiency = vehicles.map(v => {
+        const vId = v._id || v.id;
+        const logs = fuelLogs.filter(f => f.vehicle_id === vId);
+        const totalLiters = logs.reduce((s, f) => s + (f.liters || 0), 0);
+        
+        const vTrips = completedTrips.filter(t => t.vehicle_id === vId);
+        const totalKm = vTrips.reduce((s, t) => {
+            if (t.odometer_end && t.odometer_start) {
+                return s + (t.odometer_end - t.odometer_start);
+            }
+            return s;
+        }, 0);
+        
+        return { 
+            ...v, 
+            totalLiters, 
+            totalKm, 
+            efficiency: totalLiters > 0 ? (totalKm / totalLiters).toFixed(2) : 'N/A' 
+        };
+    }).filter(v => v.totalLiters > 0);
 
-        return vehicles.slice(0, 10).map(v => {
-            const vId = String(v._id || v.id);
-            const scores = weeks.map(w => {
-                const logs = fuelLogs.filter(f => String(f.vehicle_id?._id || f.vehicle_id?.id || f.vehicle_id) === vId && new Date(f.date) >= w.start && new Date(f.date) <= w.end);
-                const liters = logs.reduce((s, l) => s + (l.liters || 0), 0);
-                const vTrips = trips.filter(t => String(t.vehicle_id?._id || t.vehicle_id?.id || t.vehicle_id) === vId && t.status === 'completed' && new Date(t.date_start) >= w.start && new Date(t.date_start) <= w.end);
-                const km = vTrips.reduce((s, t) => s + (t.odometer_end - t.odometer_start || 0), 0);
-                return liters > 0 ? (km / liters) : null;
-            });
-            return { name: v.name, scores };
-        });
-    }, [vehicles, fuelLogs, trips]);
+    // Helper to get vehicle fuel total
+    const vehicleTotalFuel = (vehicleId) => {
+        return fuelLogs
+            .filter(f => f.vehicle_id === vehicleId)
+            .reduce((s, f) => s + (f.cost || 0), 0);
+    };
 
-    if (loading) return <SkeletonTable rows={10} cols={6} />;
+    // Helper to get vehicle maintenance total
+    const vehicleTotalMaintenance = (vehicleId) => {
+        return maintenance
+            .filter(m => m.vehicle_id === vehicleId)
+            .reduce((s, m) => s + (m.cost || 0), 0);
+    };
+
+    // Vehicle ROI (using mock revenue of $500 per trip)
+    const vehicleROI = vehicles.map(v => {
+        const vId = v._id || v.id;
+        const fuel = vehicleTotalFuel(vId);
+        const maint = vehicleTotalMaintenance(vId);
+        const revenue = completedTrips.filter(t => t.vehicle_id === vId).length * 500;
+        const cost = fuel + maint;
+        const acquisitionCost = 50000; // Mock acquisition cost
+        const roi = acquisitionCost > 0 ? (((revenue - cost) / acquisitionCost) * 100).toFixed(1) : 'N/A';
+        return { ...v, revenue, fuel, maint, cost, roi };
+    }).filter(v => v.revenue > 0 || v.cost > 0);
+
+    // Trip stats
+    const tripCompletionRate = trips.length ? Math.round((completedTrips.length / trips.length) * 100) : 0;
+    const totalFuelSpend = fuelLogs.reduce((s, f) => s + (f.cost || 0), 0);
+    const totalMaintCost = maintenance.reduce((s, m) => s + (m.cost || 0), 0);
+
+    // Driver performance
+    const driverStats = drivers.map(d => {
+        const dId = d._id || d.id;
+        const dTrips = trips.filter(t => t.driver_id === dId);
+        const done = dTrips.filter(t => t.status === 'Completed').length;
+        const rate = dTrips.length ? Math.round((done / dTrips.length) * 100) : 0;
+        return { ...d, totalTrips: dTrips.length, completedTrips: done, completionRate: rate };
+    });
+
+    const maxEff = Math.max(...fuelEfficiency.map(v => Number(v.efficiency) || 0), 1);
+
+    if (loading) {
+        return <div className="loading">Loading analytics...</div>;
+    }
 
     return (
         <div className="fade-in">
-            <div className="page-header" style={{ marginBottom: '2rem' }}>
+            <div className="page-header">
                 <div>
-                    <h1 className="page-title">Strategic Analytics</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>Financial performance and efficiency auditing</p>
+                    <div className="page-title">Analytics & Reports</div>
+                    <div className="page-sub">Operational insights and financial performance</div>
                 </div>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button className="btn btn-secondary">Download audit</button>
-                    <button className="btn btn-primary">Refresh Intel</button>
+                <div className="page-actions">
+                    <button className="btn btn-secondary" onClick={() => alert('CSV export coming soon!')}>⬇ Export CSV</button>
+                    <button className="btn btn-secondary" onClick={() => alert('PDF export coming soon!')}>⬇ Export PDF</button>
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-
-                {/* ROI Leaderboard */}
-                <div className="ff-card">
-                    <div className="table-toolbar">
-                        <div>
-                            <h3 className="table-toolbar-title">Yield Ranking (ROI)</h3>
-                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Asset Acquisition vs. Revenue</span>
-                        </div>
-                    </div>
-                    <table className="ff-table data-table">
-                        <thead>
-                            <tr>
-                                <th style={{ width: '80px', textAlign: 'center' }}>Rank</th>
-                                <th>Asset Details</th>
-                                <th style={{ textAlign: 'right', paddingRight: '24px' }}>Yield ROI</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {roiData.map((v, i) => (
-                                <tr key={v._id || v.id} style={{ background: v.roi < 0 ? 'rgba(239, 68, 68, 0.05)' : '' }}>
-                                    <td style={{ textAlign: 'center' }}>
-                                        <div style={{ fontSize: '1.25rem' }}>
-                                            {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{v.name}</div>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                            Rev: ${v.revenue.toLocaleString()} <span style={{ opacity: 0.3 }}>|</span> Op: ${v.opCost.toLocaleString()}
-                                        </div>
-                                    </td>
-                                    <td style={{ textAlign: 'right', fontWeight: 700, paddingRight: '24px', color: v.roi >= 0 ? 'var(--color-available)' : 'var(--color-suspended)' }}>
-                                        {v.roi.toFixed(1)}%
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            {/* Top KPIs */}
+            <div className="kpi-grid" style={{ marginBottom: 24 }}>
+                <div className="kpi-card green">
+                    <div className="kpi-icon">✅</div>
+                    <div className="kpi-label">Trip Completion Rate</div>
+                    <div className="kpi-value">{tripCompletionRate}%</div>
+                    <div className="kpi-sub">{completedTrips.length} of {trips.length} trips</div>
                 </div>
+                <div className="kpi-card blue">
+                    <div className="kpi-icon">⛽</div>
+                    <div className="kpi-label">Total Fuel Spend</div>
+                    <div className="kpi-value">${(totalFuelSpend / 1000).toFixed(1)}k</div>
+                    <div className="kpi-sub">Across all vehicles</div>
+                </div>
+                <div className="kpi-card orange">
+                    <div className="kpi-icon">🔧</div>
+                    <div className="kpi-label">Maintenance Cost</div>
+                    <div className="kpi-value">${(totalMaintCost / 1000).toFixed(1)}k</div>
+                    <div className="kpi-sub">All service records</div>
+                </div>
+                <div className="kpi-card red">
+                    <div className="kpi-icon">💰</div>
+                    <div className="kpi-label">Total Op. Cost</div>
+                    <div className="kpi-value">${((totalFuelSpend + totalMaintCost) / 1000).toFixed(1)}k</div>
+                    <div className="kpi-sub">Fuel + Maintenance</div>
+                </div>
+            </div>
 
-                {/* Efficiency Heatmap */}
-                <div className="ff-card" style={{ padding: '1.5rem' }}>
-                    <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '1.5rem' }}>Fuel Efficiency Heatmap (km/L)</h3>
-                    <div style={{ overflowX: 'auto' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '120px repeat(8, 1fr)', gap: '4px', minWidth: '500px' }}>
-                            <div />
-                            {Array.from({ length: 8 }).map((_, i) => (
-                                <div key={i} style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textAlign: 'center' }}>
-                                    W{8 - i}
+            <div className="stats-grid">
+                {/* Fuel Efficiency */}
+                <div className="stat-card">
+                    <div className="stat-card-title">⛽ Fuel Efficiency (km/L)</div>
+                    {fuelEfficiency.length === 0 ? (
+                        <div className="empty-state" style={{ padding: '20px 0' }}>
+                            <div className="empty-state-icon">📊</div>
+                            <div className="empty-state-text">Not enough data yet</div>
+                        </div>
+                    ) : (
+                        <div className="stat-bar-list">
+                            {fuelEfficiency.sort((a, b) => Number(b.efficiency) - Number(a.efficiency)).map(v => (
+                                <div key={v._id || v.id} className="stat-bar-item">
+                                    <div className="stat-bar-label">
+                                        <span style={{ fontSize: 12 }}>{v.name}</span>
+                                        <strong>{v.efficiency} km/L</strong>
+                                    </div>
+                                    <div className="stat-bar-track">
+                                        <div className="stat-bar-fill" style={{
+                                            width: `${(Number(v.efficiency) / maxEff) * 100}%`,
+                                            background: 'linear-gradient(90deg,var(--blue-t),var(--green-t))'
+                                        }} />
+                                    </div>
                                 </div>
                             ))}
-                            {heatmapData.map(v => (
-                                <React.Fragment key={v.name}>
-                                    <div style={{ fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.name}</div>
-                                    {v.scores.map((s, i) => {
-                                        const opacity = s ? Math.min(s / 15, 1) : 0.1;
-                                        const color = s ? `rgba(34, 197, 94, ${opacity})` : 'var(--bg-app)';
-                                        return (
-                                            <div
-                                                key={i}
-                                                style={{ background: color, height: '20px', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', border: '1px solid var(--border-light)' }}
-                                                title={s ? `${s.toFixed(1)} km/L` : 'No data'}
-                                            >
-                                                {s ? '' : '—'}
-                                            </div>
-                                        );
-                                    })}
-                                </React.Fragment>
+                        </div>
+                    )}
+                </div>
+
+                {/* Vehicle ROI */}
+                <div className="stat-card">
+                    <div className="stat-card-title">📈 Vehicle ROI (%)</div>
+                    {vehicleROI.length === 0 ? (
+                        <div className="empty-state" style={{ padding: '20px 0' }}>
+                            <div className="empty-state-icon">📊</div>
+                            <div className="empty-state-text">No trip data yet</div>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {vehicleROI.map(v => (
+                                <div key={v._id || v.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-light)' }}>
+                                    <div>
+                                        <div style={{ fontSize: 13, fontWeight: 600 }}>{v.name}</div>
+                                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                                            Revenue ${v.revenue.toLocaleString()} · Cost ${v.cost.toLocaleString()}
+                                        </div>
+                                    </div>
+                                    <span style={{
+                                        fontWeight: 700, fontSize: 14,
+                                        color: Number(v.roi) > 0 ? 'var(--green-t)' : 'var(--red-t)'
+                                    }}>
+                                        {v.roi !== 'N/A' ? `${v.roi}%` : '—'}
+                                    </span>
+                                </div>
                             ))}
                         </div>
-                    </div>
-                    <div style={{ marginTop: '2rem', borderTop: '1px solid var(--border-light)', paddingTop: '1rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem' }}>
-                            <span style={{ color: 'var(--text-muted)' }}>Less Efficient</span>
-                            <div style={{ flex: 1, height: '8px', margin: '0 1rem', background: 'linear-gradient(90deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 1))', borderRadius: '4px' }} />
-                            <span style={{ color: 'var(--color-available)', fontWeight: 700 }}>Optimal</span>
-                        </div>
-                    </div>
-                    <div style={{ marginTop: '1.5rem', display: 'flex', gap: '8px', alignItems: 'flex-start', background: 'var(--bg-app)', padding: '0.75rem', borderRadius: '8px' }}>
-                        <Info size={14} style={{ marginTop: '2px', color: 'var(--primary)' }} />
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                            Heatmap correlates GPS odometer deltas against fuel consumption. Darker green indicates lower litre-to-km ratio.
-                        </p>
-                    </div>
+                    )}
                 </div>
+            </div>
+
+            {/* Driver Performance Table */}
+            <div className="table-wrapper" style={{ marginTop: 20 }}>
+                <div className="table-toolbar">
+                    <span className="table-toolbar-title">Driver Performance</span>
+                </div>
+                <table className="data-table">
+                    <thead>
+                        <tr>
+                            <th>Driver</th><th>Total Trips</th><th>Completed</th>
+                            <th>Completion Rate</th><th>Safety Score</th><th>License Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {driverStats.sort((a, b) => b.safety_score - a.safety_score).map(d => (
+                            <tr key={d._id || d.id}>
+                                <td><strong>{d.name}</strong></td>
+                                <td>{d.totalTrips}</td>
+                                <td>{d.completedTrips}</td>
+                                <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <div style={{ width: 60, height: 6, background: 'var(--bg-hover)', borderRadius: 999, overflow: 'hidden' }}>
+                                            <div style={{ 
+                                                width: `${d.completionRate}%`, 
+                                                height: '100%', 
+                                                background: d.completionRate > 80 ? 'var(--green-t)' : 'var(--orange-t)', 
+                                                borderRadius: 999 
+                                            }} />
+                                        </div>
+                                        <span style={{ fontSize: 12 }}>{d.completionRate}%</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <div style={{ width: 60, height: 6, background: 'var(--bg-hover)', borderRadius: 999, overflow: 'hidden' }}>
+                                            <div style={{ 
+                                                width: `${d.safety_score}%`, 
+                                                height: '100%', 
+                                                background: d.safety_score > 80 ? 'var(--green-t)' : d.safety_score > 60 ? 'var(--orange-t)' : 'var(--red-t)', 
+                                                borderRadius: 999 
+                                            }} />
+                                        </div>
+                                        <span style={{ fontSize: 12 }}>{d.safety_score}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span style={{
+                                        fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 999,
+                                        background: new Date(d.license_expiry) < new Date() ? 'var(--red-bg)' : 'var(--green-bg)',
+                                        color: new Date(d.license_expiry) < new Date() ? 'var(--red-t)' : 'var(--green-t)',
+                                    }}>
+                                        {new Date(d.license_expiry) < new Date() ? 'Expired' : 'Valid'}
+                                    </span>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-muted)' }}>
+                ℹ Vehicle ROI uses mock revenue of $500/completed trip. Connect real revenue data via backend API.
             </div>
         </div>
     );

@@ -1,63 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { useState, useEffect } from 'react';
 import StatusBadge from '@/components/StatusBadge';
-import SkeletonTable from '@/components/SkeletonTable';
-import useCountUp from '@/hooks/useCountUp';
-import vehicleService from '@/services/vehicleService';
-import driverService from '@/services/driverService';
-import tripService from '@/services/tripService';
-import maintenanceService from '@/services/maintenanceService';
-import { getRelativeTime, getVehicleName } from '@/services/utils';
-
-function KPICard({ label, value, icon, color, delay, onClick }) {
-    const animatedValue = useCountUp(value);
-    const isPercent = String(label).toLowerCase().includes('utilization');
-
-    return (
-        <div
-            className="ff-card"
-            onClick={onClick}
-            style={{
-                padding: '1.5rem',
-                cursor: onClick ? 'pointer' : 'default',
-                animation: `fadeInScale 0.4s ease forwards ${delay}ms`,
-                opacity: 0
-            }}
-        >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <span style={{ fontSize: '1.25rem' }}>{icon}</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {label}
-                </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                <h2 style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    {animatedValue}
-                </h2>
-                {isPercent && <span style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-muted)' }}>%</span>}
-            </div>
-        </div>
-    );
-}
-
-function EfficiencyCard({ value }) {
-    const animatedValue = useCountUp(value);
-    return (
-        <div className="ff-card" style={{ padding: '1.5rem', background: 'var(--primary)', color: 'white' }}>
-            <h3 style={{ fontSize: '0.9rem', marginBottom: '1.5rem' }}>Operational Efficiency</h3>
-            <div style={{ fontSize: '2.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-                {animatedValue}%
-            </div>
-            <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '2rem' }}>
-                +2.4% from last month
-            </div>
-            <div style={{ height: '4px', background: 'rgba(255,255,255,0.2)', borderRadius: '2px' }}>
-                <div style={{ width: `${value}%`, height: '100%', background: 'white', borderRadius: '2px' }} />
-            </div>
-        </div>
-    );
-}
+import { useNavigate } from 'react-router-dom';
+import vehicleService from '../services/vehicleService';
+import driverService from '../services/driverService';
+import tripService from '../services/tripService';
+import maintenanceService from '../services/maintenanceService';
 
 export default function Dashboard() {
     const [vehicles, setVehicles] = useState([]);
@@ -65,256 +12,205 @@ export default function Dashboard() {
     const [trips, setTrips] = useState([]);
     const [maintenance, setMaintenance] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [dismissedAlerts, setDismissedAlerts] = useState(() =>
-        JSON.parse(sessionStorage.getItem('ff-dismissed-alerts') || '[]')
-    );
     const navigate = useNavigate();
 
-    const fetchData = async () => {
+    useEffect(() => {
+        fetchDashboardData();
+    }, []);
+
+    const fetchDashboardData = async () => {
         try {
-            const [v, d, t, m] = await Promise.all([
+            const [vehiclesData, driversData, tripsData, maintenanceData] = await Promise.all([
                 vehicleService.getAll(),
                 driverService.getAll(),
                 tripService.getAll(),
                 maintenanceService.getAll()
             ]);
-            setVehicles(v || []);
-            setDrivers(d || []);
-            setTrips(t || []);
-            setMaintenance(m || []);
+            setVehicles(vehiclesData);
+            setDrivers(driversData);
+            setTrips(tripsData);
+            setMaintenance(maintenanceData);
         } catch (error) {
-            console.error('Fetch error:', error);
+            console.error('Error fetching dashboard data:', error);
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        fetchData();
-        const interval = setInterval(fetchData, 30000);
-        return () => clearInterval(interval);
-    }, []);
+    // Calculate KPIs
+    const activeFleet = vehicles.filter(v => v.status === 'On Trip').length;
+    const inShop = vehicles.filter(v => v.status === 'In Shop').length;
+    const available = vehicles.filter(v => v.status === 'Available').length;
+    const totalActive = vehicles.filter(v => v.status !== 'Out of Service').length;
+    const utilization = totalActive ? Math.round(((totalActive - available) / totalActive) * 100) : 0;
+    const pendingCargo = trips.filter(t => t.status === 'Draft').length;
+    const openMaint = maintenance.filter(m => {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        return new Date(m.service_date) > thirtyDaysAgo;
+    }).length;
 
-    const kpis = useMemo(() => {
-        const active = vehicles.filter(v => v.status === 'on_trip').length;
-        const shop = vehicles.filter(v => v.status === 'in_shop').length;
-        const total = vehicles.length;
-        const util = total ? Math.round((active / total) * 100) : 0;
-        const pending = trips.filter(t => t.status === 'draft').length;
+    // Get recent trips
+    const recentTrips = [...trips]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5);
 
-        return [
-            { label: 'Active Fleet', value: active, icon: '🚛', color: 'var(--color-on-trip)', delay: 0 },
-            { label: 'In Shop', value: shop, icon: '🔧', color: 'var(--color-in_shop)', delay: 100 },
-            { label: 'Utilization', value: util, icon: '📈', color: 'var(--color-available)', delay: 200 },
-            { label: 'Pending Cargo', value: pending, icon: '📦', color: 'var(--primary)', delay: 300 },
-        ];
-    }, [vehicles, trips]);
+    // Get drivers with expiring licenses (next 30 days)
+    const alertDrivers = drivers.filter(d => {
+        const exp = new Date(d.license_expiry);
+        const soon = new Date();
+        soon.setDate(soon.getDate() + 30);
+        return exp < soon;
+    });
 
-    const alerts = useMemo(() => {
-        const list = [];
-
-        // License expiry
-        drivers.forEach(d => {
-            const days = Math.ceil((new Date(d.license_expiry) - Date.now()) / 86400000);
-            if (days <= 30 && days > 0) {
-                list.push({ id: `lic-${d._id}`, message: `⚠️ ${d.name}'s license expires in ${days} days`, type: 'warning' });
-            } else if (days <= 0) {
-                list.push({ id: `lic-${d._id}`, message: `🚨 ${d.name}'s license has EXPIRED`, type: 'danger' });
-            }
-        });
-
-        // Overdue trips
-        trips.forEach(t => {
-            if (t.status === 'dispatched' && new Date(t.date_start) < new Date(Date.now() - 86400000)) {
-                list.push({ id: `trip-${t._id || t.id}`, message: `🚛 Trip #${String(t._id || t.id).slice(-6)} is overdue for start`, type: 'warning' });
-            }
-        });
-
-        return list.filter(a => !dismissedAlerts.includes(a.id));
-    }, [drivers, trips, dismissedAlerts]);
-
-    const chartData = useMemo(() => {
-        const counts = vehicles.reduce((acc, v) => {
-            acc[v.status] = (acc[v.status] || 0) + 1;
-            return acc;
-        }, {});
-
-        return [
-            { name: 'On Trip', value: counts.on_trip || 1, color: '#0EA5E9' },
-            { name: 'Available', value: counts.available || 1, color: '#22C55E' },
-            { name: 'In Shop', value: counts.in_shop || 1, color: '#F59E0B' },
-            { name: 'Retired', value: counts.retired || 1, color: '#94A3B8' },
-        ];
-    }, [vehicles]);
-
-    const activityFeed = useMemo(() => {
-        const tFeed = trips.slice(0, 5).map(t => ({
-            id: t._id,
-            type: 'trip',
-            date: t.createdAt,
-            msg: `New trip #${String(t._id).slice(-4)} created: ${t.start_location} → ${t.end_location}`
-        }));
-        const mFeed = maintenance.slice(0, 5).map(m => ({
-            id: m._id,
-            type: 'maint',
-            date: m.createdAt,
-            msg: `Maintenance logged for ${getVehicleName(vehicles, m.vehicle_id)}: ${m.description || 'Routine Check'}`
-        }));
-
-        return [...tFeed, ...mFeed].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 8);
-    }, [trips, maintenance]);
-
-    const handleDismiss = (id) => {
-        const newDismissed = [...dismissedAlerts, id];
-        setDismissedAlerts(newDismissed);
-        sessionStorage.setItem('ff-dismissed-alerts', JSON.stringify(newDismissed));
+    // Helper to get vehicle name
+    const getVehicleName = (idOrObj) => {
+        if (!idOrObj) return 'Unknown';
+        if (typeof idOrObj === 'object' && idOrObj.name) return idOrObj.name;
+        const idStr = String(typeof idOrObj === 'object' ? (idOrObj._id || idOrObj.id) : idOrObj);
+        const v = vehicles.find(v => String(v._id || v.id) === idStr);
+        return v ? v.name : `Vehicle #${idStr.slice(-6)}`;
     };
 
-    const CustomTooltip = ({ active, payload }) => {
-        if (active && payload && payload.length) {
-            return (
-                <div className="ff-chart-tooltip">
-                    <div className="ff-tooltip-color" style={{ color: payload[0].payload.color, backgroundColor: payload[0].payload.color }} />
-                    <span className="ff-tooltip-label">{payload[0].name}</span>
-                    <span className="ff-tooltip-value">{payload[0].value}</span>
-                </div>
-            );
-        }
-        return null;
+    // Helper to get driver name
+    const getDriverName = (idOrObj) => {
+        if (!idOrObj) return 'Unknown';
+        if (typeof idOrObj === 'object' && idOrObj.name) return idOrObj.name;
+        const idStr = String(typeof idOrObj === 'object' ? (idOrObj._id || idOrObj.id) : idOrObj);
+        const d = drivers.find(d => String(d._id || d.id) === idStr);
+        return d ? d.name : `Driver #${idStr.slice(-6)}`;
     };
 
-    if (loading) return <SkeletonTable rows={8} cols={4} />;
+    if (loading) {
+        return <div className="loading">Loading dashboard...</div>;
+    }
 
     return (
         <div className="fade-in">
-            <div style={{ marginBottom: '2rem' }}>
-                <h1 className="page-title" style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Status Overview</h1>
-                <p style={{ color: 'var(--text-muted)' }}>Real-time coordination of 124 fleet units.</p>
-            </div>
-
-            {/* Alerts Banner */}
-            {alerts.length > 0 && (
-                <div style={{ marginBottom: '2rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {alerts.map(alert => (
-                        <div
-                            key={alert.id}
-                            style={{
-                                background: alert.type === 'danger' ? 'var(--red-bg)' : 'var(--orange-bg)',
-                                color: alert.type === 'danger' ? 'var(--color-suspended)' : 'var(--color-in-shop)',
-                                padding: '0.75rem 1.25rem',
-                                borderRadius: '8px',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                fontSize: '0.9rem',
-                                fontWeight: 600,
-                                border: `1px solid ${alert.type === 'danger' ? '#fecaca' : '#fde68a'}`
-                            }}
-                        >
-                            <span>{alert.message}</span>
-                            <button onClick={() => handleDismiss(alert.id)} style={{ padding: '0.25rem', opacity: 0.6 }}>✕</button>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* KPI Grid */}
+            {/* KPI Row */}
             <div className="kpi-grid">
-                {kpis.map(kpi => <KPICard key={kpi.label} {...kpi} />)}
+                <div className="kpi-card blue" onClick={() => navigate('/trips')} style={{ cursor: 'pointer' }}>
+                    <div className="kpi-icon">🚛</div>
+                    <div className="kpi-label">Active Fleet</div>
+                    <div className="kpi-value">{activeFleet}</div>
+                    <div className="kpi-sub">Vehicles currently on trip</div>
+                </div>
+                <div className="kpi-card orange" onClick={() => navigate('/maintenance')} style={{ cursor: 'pointer' }}>
+                    <div className="kpi-icon">🔧</div>
+                    <div className="kpi-label">Maintenance Alerts</div>
+                    <div className="kpi-value">{inShop}</div>
+                    <div className="kpi-sub">{openMaint} recent service records</div>
+                </div>
+                <div className="kpi-card green">
+                    <div className="kpi-icon">📈</div>
+                    <div className="kpi-label">Utilization Rate</div>
+                    <div className="kpi-value">{utilization}%</div>
+                    <div className="kpi-sub">{available} vehicles available</div>
+                </div>
+                <div className="kpi-card red" onClick={() => navigate('/trips')} style={{ cursor: 'pointer' }}>
+                    <div className="kpi-icon">📦</div>
+                    <div className="kpi-label">Pending Cargo</div>
+                    <div className="kpi-value">{pendingCargo}</div>
+                    <div className="kpi-sub">Trips awaiting dispatch</div>
+                </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '2rem', marginTop: '2rem' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            {/* Fleet Status Bar */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
 
-                    {/* Recent Trips Table */}
-                    <div className="table-wrapper ff-card">
-                        <div className="table-toolbar">
-                            <h3 className="modal-title" style={{ fontSize: '1.1rem' }}>Active Dispatch Stream</h3>
-                            <button className="btn btn-secondary" onClick={() => navigate('/trips')} style={{ fontSize: '0.8rem', padding: '4px 12px' }}>
-                                View Logs
-                            </button>
-                        </div>
-                        <table className="ff-table data-table">
-                            <thead>
-                                <tr>
-                                    <th>Ref</th>
-                                    <th>Vehicle</th>
-                                    <th>Route</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {trips.slice(0, 8).map(trip => (
-                                    <tr key={trip._id}>
-                                        <td style={{ fontWeight: 600, fontSize: '0.85rem' }}>#{String(trip._id).slice(-6).toUpperCase()}</td>
-                                        <td>{getVehicleName(vehicles, trip.vehicle_id)}</td>
-                                        <td style={{ fontSize: '0.85rem' }}>{trip.start_location} → {trip.end_location}</td>
-                                        <td><StatusBadge status={trip.status} /></td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                        {/* Donut Chart */}
-                        <div className="ff-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, alignSelf: 'flex-start', marginBottom: '1rem' }}>Fleet Health</h3>
-                            <div style={{ width: '100%', height: 200, position: 'relative' }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={chartData}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={60}
-                                            outerRadius={80}
-                                            paddingAngle={5}
-                                            dataKey="value"
-                                        >
-                                            {chartData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.color} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip content={<CustomTooltip />} offset={20} />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                                    <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>{Math.round((vehicles.filter(v => v.status === 'on_trip').length / vehicles.length) * 100)}%</span>
-                                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Active</span>
+                {/* Vehicle Status Overview */}
+                <div className="stat-card">
+                    <div className="stat-card-title">Fleet Status Overview</div>
+                    <div className="stat-bar-list">
+                        {[
+                            { label: 'Available', count: available, color: 'var(--green-t)', total: vehicles.length },
+                            { label: 'On Trip', count: activeFleet, color: 'var(--blue-t)', total: vehicles.length },
+                            { label: 'In Shop', count: inShop, color: 'var(--orange-t)', total: vehicles.length },
+                            { label: 'Out of Service', count: vehicles.filter(v => v.status === 'Out of Service').length, color: 'var(--red-t)', total: vehicles.length },
+                        ].map((item) => (
+                            <div key={item.label} className="stat-bar-item">
+                                <div className="stat-bar-label">
+                                    <span>{item.label}</span>
+                                    <strong>{item.count}</strong>
                                 </div>
-                            </div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px', marginTop: '1rem' }}>
-                                {chartData.map(item => (
-                                    <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.color }} />
-                                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{item.name}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Efficiency Mini Card */}
-                        <EfficiencyCard value={98} />
-                    </div>
-                </div>
-
-                {/* Activity Feed */}
-                <div className="ff-card" style={{ padding: '1.5rem', height: 'fit-content' }}>
-                    <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '1.5rem' }}>System Pulse</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxHeight: '560px', overflowY: 'auto', paddingRight: '0.5rem' }}>
-                        {activityFeed.map(item => (
-                            <div key={item.id} style={{ borderLeft: `3px solid ${item.type === 'trip' ? 'var(--primary)' : 'var(--color-in-shop)'}`, paddingLeft: '1rem' }}>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                                    {item.msg}
-                                </p>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                    {getRelativeTime(item.date)}
-                                </span>
+                                <div className="stat-bar-track">
+                                    <div
+                                        className="stat-bar-fill"
+                                        style={{
+                                            width: item.total ? `${(item.count / item.total) * 100}%` : '0%',
+                                            background: item.color,
+                                        }}
+                                    />
+                                </div>
                             </div>
                         ))}
                     </div>
                 </div>
+
+                {/* Driver Compliance Alerts */}
+                <div className="stat-card">
+                    <div className="stat-card-title">
+                        Driver Compliance Alerts
+                        {alertDrivers.length > 0 && (
+                            <span style={{ marginLeft: 8, color: 'var(--red-t)', fontSize: 11 }}>
+                                ⚠ {alertDrivers.length} requiring attention
+                            </span>
+                        )}
+                    </div>
+                    {alertDrivers.length === 0 ? (
+                        <div className="empty-state" style={{ padding: '20px 0' }}>
+                            <div className="empty-state-icon">✅</div>
+                            <div className="empty-state-text">All licenses valid</div>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {alertDrivers.slice(0, 5).map((d) => {
+                                const expired = new Date(d.license_expiry) < new Date();
+                                return (
+                                    <div key={d._id || d.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-light)' }}>
+                                        <div>
+                                            <div style={{ fontSize: 13, fontWeight: 600 }}>{d.name}</div>
+                                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Expires: {new Date(d.license_expiry).toLocaleDateString()}</div>
+                                        </div>
+                                        <StatusBadge status={expired ? 'expired' : 'scheduled'} />
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Recent Trips */}
+            <div className="table-wrapper">
+                <div className="table-toolbar">
+                    <span className="table-toolbar-title">Recent Trips</span>
+                    <button className="btn btn-secondary btn-sm" onClick={() => navigate('/trips')}>View All →</button>
+                </div>
+                <table className="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Route</th>
+                            <th>Driver</th>
+                            <th>Cargo</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {recentTrips.length === 0 ? (
+                            <tr><td colSpan={5}><div className="empty-state"><div className="empty-state-icon">🚚</div><div className="empty-state-text">No recent trips</div></div></td></tr>
+                        ) : recentTrips.map((t) => (
+                            <tr key={t._id || t.id}>
+                                <td className="font-mono">#{String(t._id || t.id).slice(-6)}</td>
+                                <td>{t.start_location || '?'} → {t.end_location || '?'}</td>
+                                <td className="text-secondary">{getDriverName(t.driver_id)}</td>
+                                <td>{t.cargo_weight} kg</td>
+                                <td><StatusBadge status={t.status} /></td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
         </div>
     );

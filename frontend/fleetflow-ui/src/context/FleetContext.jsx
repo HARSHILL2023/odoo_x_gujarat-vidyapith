@@ -5,7 +5,7 @@ import {
     INITIAL_TRIPS,
     INITIAL_MAINTENANCE,
     INITIAL_FUEL_LOGS,
-} from '../data/mockData';
+} from '@/data/mockData';
 
 const FleetContext = createContext(null);
 

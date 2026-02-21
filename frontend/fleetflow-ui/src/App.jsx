@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { FleetProvider } from './context/FleetContext';
-import Sidebar from './components/Sidebar';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Vehicles from './pages/Vehicles';
-import Drivers from './pages/Drivers';
-import Trips from './pages/Trips';
-import Maintenance from './pages/Maintenance';
-import FuelLogs from './pages/FuelLogs';
-import Analytics from './pages/Analytics';
+import { FleetProvider } from '@/context/FleetContext';
+import Sidebar from '@/components/Sidebar';
+import Login from '@/pages/Login';
+import Dashboard from '@/pages/Dashboard';
+import Vehicles from '@/pages/Vehicles';
+import Drivers from '@/pages/Drivers';
+import Trips from '@/pages/Trips';
+import Maintenance from '@/pages/Maintenance';
+import FuelLogs from '@/pages/FuelLogs';
+import Analytics from '@/pages/Analytics';
+import authService from '@/services/authService';
 
 const PAGE_TITLES = {
   '/dashboard': { title: 'Command Center', sub: 'Real-time fleet overview' },
@@ -21,12 +22,26 @@ const PAGE_TITLES = {
   '/analytics': { title: 'Analytics & Reports', sub: 'Data-driven fleet insights' },
 };
 
+const ProtectedRoute = ({ children, allowedRoles, user }) => {
+  if (!user) return <Navigate to="/" />;
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" />;
+  }
+  return children;
+};
+
 function AppShell({ user, onLogout, theme, toggleTheme }) {
   const path = window.location.pathname;
   const meta = PAGE_TITLES[path] || {};
+
+  const handleLogout = () => {
+    authService.logout();
+    onLogout();
+  };
+
   return (
     <div className="app-shell">
-      <Sidebar user={user} onLogout={onLogout} />
+      <Sidebar user={user} onLogout={handleLogout} />
       <div className="app-main">
         <header className="header">
           <div>
@@ -66,7 +81,7 @@ function AppShell({ user, onLogout, theme, toggleTheme }) {
               borderRadius: 6,
               border: '1px solid var(--border)',
             }}>
-              {user?.role}
+              {user?.role || 'User'}
             </span>
           </div>
         </header>
@@ -77,8 +92,16 @@ function AppShell({ user, onLogout, theme, toggleTheme }) {
             <Route path="/drivers" element={<Drivers />} />
             <Route path="/trips" element={<Trips />} />
             <Route path="/maintenance" element={<Maintenance />} />
-            <Route path="/fuel" element={<FuelLogs />} />
-            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/fuel" element={
+              <ProtectedRoute allowedRoles={['Fleet Manager', 'Finance Admin', 'Dispatcher']} user={user}>
+                <FuelLogs />
+              </ProtectedRoute>
+            } />
+            <Route path="/analytics" element={
+              <ProtectedRoute allowedRoles={['Fleet Manager']} user={user}>
+                <Analytics />
+              </ProtectedRoute>
+            } />
             <Route path="*" element={<Navigate to="/dashboard" />} />
           </Routes>
         </main>
@@ -89,9 +112,23 @@ function AppShell({ user, onLogout, theme, toggleTheme }) {
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState(
     () => localStorage.getItem('ff-theme') || 'dark'
   );
+
+  // Check for existing session on app load
+  useEffect(() => {
+    const checkAuth = () => {
+      const currentUser = authService.getCurrentUser();
+      if (currentUser) {
+        setUser(currentUser);
+      }
+      setLoading(false);
+    };
+
+    checkAuth();
+  }, []);
 
   // Apply theme to <html> so all CSS variables switch automatically
   useEffect(() => {
@@ -100,6 +137,28 @@ export default function App() {
   }, [theme]);
 
   const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+
+  const handleLogin = (userData) => {
+    setUser(userData);
+  };
+
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        background: 'var(--bg-primary)',
+        color: 'var(--text-primary)'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <h2>FleetFlow</h2>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <FleetProvider>
@@ -113,7 +172,7 @@ export default function App() {
           />
         ) : (
           <Routes>
-            <Route path="*" element={<Login onLogin={setUser} />} />
+            <Route path="*" element={<Login onLogin={handleLogin} />} />
           </Routes>
         )}
       </BrowserRouter>

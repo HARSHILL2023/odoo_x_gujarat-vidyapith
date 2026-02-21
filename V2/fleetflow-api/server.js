@@ -40,6 +40,10 @@ app.use(cors({
 app.use(express.json());
 
 // ─── Health Check ───────────────────────────────────────────
+app.get('/', (_req, res) => {
+    res.json({ message: 'FleetFlow API is running!', health: '/health' });
+});
+
 app.get('/health', (_req, res) => {
     res.json({ status: 'ok', db: 'mongodb', timestamp: new Date().toISOString() });
 });

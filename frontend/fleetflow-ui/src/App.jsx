@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { FleetProvider } from '@/context/FleetContext';
 import Sidebar from '@/components/Sidebar';
 import Login from '@/pages/Login';
+import Register from '@/pages/Register';
 import Dashboard from '@/pages/Dashboard';
 import Vehicles from '@/pages/Vehicles';
 import Drivers from '@/pages/Drivers';
@@ -172,6 +173,7 @@ export default function App() {
           />
         ) : (
           <Routes>
+            <Route path="/register" element={<Register />} />
             <Route path="*" element={<Login onLogin={handleLogin} />} />
           </Routes>
         )}

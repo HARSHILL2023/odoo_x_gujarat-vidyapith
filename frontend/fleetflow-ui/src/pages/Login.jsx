@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation, Link } from 'react-router-dom';
 import authService from '@/services/authService';
 
 const ROLES = ['Fleet Manager', 'Dispatcher', 'Finance Admin'];
@@ -8,7 +9,15 @@ export default function Login({ onLogin }) {
     const [password, setPassword] = useState('password');
     const [role, setRole] = useState('Fleet Manager');
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
+    const location = useLocation();
+
+    useEffect(() => {
+        if (location.state?.message) {
+            setSuccess(location.state.message);
+        }
+    }, [location]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -45,6 +54,7 @@ export default function Login({ onLogin }) {
                 </div>
 
                 <form className="login-form" onSubmit={handleSubmit}>
+                    {success && <div className="alert alert-success">{success}</div>}
                     {error && <div className="alert alert-danger">{error}</div>}
 
                     <div className="form-group">
@@ -54,7 +64,7 @@ export default function Login({ onLogin }) {
                             type="email"
                             placeholder="you@fleetflow.com"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            onChange={(e) => { setEmail(e.target.value); setSuccess(''); }}
                             disabled={loading}
                         />
                     </div>
@@ -93,6 +103,11 @@ export default function Login({ onLogin }) {
                     >
                         {loading ? 'Signing In...' : 'Sign In →'}
                     </button>
+
+                    <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.9rem' }}>
+                        Don't have an account? <Link to="/register" style={{ color: 'var(--blue)', fontWeight: 600 }}>Create Account</Link>
+                    </div>
+
                     <div className="login-forgot">Forgot password?</div>
                 </form>
 

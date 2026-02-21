@@ -48,9 +48,12 @@ app.use((err, _req, res, _next) => {
     res.status(500).json({ error: 'Internal server error.' });
 });
 
-// ─── Start Server ───────────────────────────────────────────
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-    console.log(`🚚 FleetFlow API running on http://localhost:${PORT}`);
-    console.log(`   Health check: http://localhost:${PORT}/health`);
-});
+// ─── Export/Start Server ──────────────────────────────────
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+    const PORT = process.env.PORT || 4000;
+    app.listen(PORT, () => {
+        console.log(`🚚 FleetFlow API running on http://localhost:${PORT}`);
+    });
+}
+
+module.exports = app;

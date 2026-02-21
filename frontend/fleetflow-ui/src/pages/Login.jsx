@@ -1,17 +1,38 @@
 import { useState } from 'react';
+import authService from '@/services/authService';
 
-const ROLES = ['Fleet Manager', 'Dispatcher', 'Safety Officer', 'Financial Analyst'];
+const ROLES = ['Fleet Manager', 'Dispatcher', 'Finance Admin'];
 
 export default function Login({ onLogin }) {
-    const [email, setEmail] = useState('admin@fleetflow.com');
-    const [password, setPassword] = useState('');
+    const [email, setEmail] = useState('manager@fleetflow.com');
+    const [password, setPassword] = useState('password');
     const [role, setRole] = useState('Fleet Manager');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!email || !password) { setError('Please fill in all fields.'); return; }
-        onLogin({ name: email.split('@')[0].replace('.', ' ').replace(/\b\w/g, c => c.toUpperCase()), email, role });
+
+        if (!email || !password) {
+            setError('Please fill in all fields.');
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+
+        try {
+            const response = await authService.login(email, password);
+
+            if (response.success) {
+                // Pass the user data to App.jsx
+                onLogin(response.user);
+            }
+        } catch (err) {
+            setError(err.message || 'Invalid email or password');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -34,6 +55,7 @@ export default function Login({ onLogin }) {
                             placeholder="you@fleetflow.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            disabled={loading}
                         />
                     </div>
 
@@ -45,6 +67,7 @@ export default function Login({ onLogin }) {
                             placeholder="••••••••"
                             value={password}
                             onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                            disabled={loading}
                         />
                     </div>
 
@@ -52,18 +75,40 @@ export default function Login({ onLogin }) {
                     <div className="login-role-grid">
                         {ROLES.map((r) => (
                             <button
-                                key={r} type="button"
+                                key={r}
+                                type="button"
                                 className={`login-role-btn${role === r ? ' active' : ''}`}
                                 onClick={() => setRole(r)}
+                                disabled={loading}
                             >
                                 {r}
                             </button>
                         ))}
                     </div>
 
-                    <button className="login-btn" type="submit">Sign In →</button>
+                    <button
+                        className="login-btn"
+                        type="submit"
+                        disabled={loading}
+                    >
+                        {loading ? 'Signing In...' : 'Sign In →'}
+                    </button>
                     <div className="login-forgot">Forgot password?</div>
                 </form>
+
+                {/* Demo credentials hint */}
+                <div style={{
+                    marginTop: '1rem',
+                    padding: '0.5rem',
+                    backgroundColor: '#f3f4f6',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.875rem',
+                    color: '#4b5563'
+                }}>
+                    <strong>Demo Credentials:</strong><br />
+                    manager@fleetflow.com / password<br />
+                    dispatcher@fleetflow.com / password
+                </div>
             </div>
         </div>
     );

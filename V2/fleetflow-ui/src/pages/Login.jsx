@@ -3,24 +3,24 @@ import { post, saveToken } from '../api';
 
 /* ─── Data ────────────────────────────────────────────────── */
 const ROLES = [
-    { label: 'Fleet Manager',    value: 'fleet_manager',    emoji: '🛡️', color: '#238bfa', desc: 'Full system access' },
-    { label: 'Dispatcher',       value: 'dispatcher',       emoji: '📦', color: '#16a34a', desc: 'Trips & fuel logs' },
-    { label: 'Safety Officer',   value: 'safety_officer',   emoji: '🔍', color: '#d97706', desc: 'Compliance & scores' },
-    { label: 'Financial Analyst',value: 'financial_analyst',emoji: '📊', color: '#9333ea', desc: 'Reports & ROI' },
+    { label: 'Fleet Manager', value: 'fleet_manager', emoji: '🛡️', color: '#238bfa', desc: 'Full system access' },
+    { label: 'Dispatcher', value: 'dispatcher', emoji: '📦', color: '#16a34a', desc: 'Trips & fuel logs' },
+    { label: 'Safety Officer', value: 'safety_officer', emoji: '🔍', color: '#d97706', desc: 'Compliance & scores' },
+    { label: 'Financial Analyst', value: 'financial_analyst', emoji: '📊', color: '#9333ea', desc: 'Reports & ROI' },
 ];
 
 const DEMO_ACCOUNTS = [
-    { label: 'Fleet Manager',    email: 'admin@fleetflow.com',  role: 'fleet_manager',    emoji: '🛡️', color: '#238bfa' },
-    { label: 'Dispatcher',       email: 'sara@fleetflow.com',   role: 'dispatcher',       emoji: '📦', color: '#16a34a' },
-    { label: 'Safety Officer',   email: 'omar@fleetflow.com',   role: 'safety_officer',   emoji: '🔍', color: '#d97706' },
-    { label: 'Financial Analyst',email: 'priya@fleetflow.com',  role: 'financial_analyst',emoji: '📊', color: '#9333ea' },
+    { label: 'Fleet Manager', email: 'admin@fleetflow.com', role: 'fleet_manager', emoji: '🛡️', color: '#238bfa' },
+    { label: 'Dispatcher', email: 'sara@fleetflow.com', role: 'dispatcher', emoji: '📦', color: '#16a34a' },
+    { label: 'Safety Officer', email: 'omar@fleetflow.com', role: 'safety_officer', emoji: '🔍', color: '#d97706' },
+    { label: 'Financial Analyst', email: 'priya@fleetflow.com', role: 'financial_analyst', emoji: '📊', color: '#9333ea' },
 ];
 
 /* ─── Password strength ───────────────────────────────────── */
 function getStrength(pw) {
     if (!pw) return 0;
     let score = 0;
-    if (pw.length >= 6)  score++;
+    if (pw.length >= 6) score++;
     if (pw.length >= 10) score++;
     if (/[A-Z]/.test(pw)) score++;
     if (/[0-9]/.test(pw)) score++;
@@ -103,13 +103,13 @@ function Field({ label, children, hint }) {
 
 /* ─── Main Component ──────────────────────────────────────── */
 export default function Login({ onLogin }) {
-    const [mode, setMode]       = useState('login');
-    const [name, setName]       = useState('');
-    const [email, setEmail]     = useState('');
+    const [mode, setMode] = useState('login');
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirm, setConfirm] = useState('');
-    const [role, setRole]       = useState('fleet_manager');
-    const [error, setError]     = useState('');
+    const [role, setRole] = useState('fleet_manager');
+    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [filledDemo, setFilledDemo] = useState(null);
 
@@ -196,7 +196,7 @@ export default function Login({ onLogin }) {
                     border: '1px solid var(--glass-border)',
                 }}>
                     {[
-                        { key: 'login',    label: 'Sign In'        },
+                        { key: 'login', label: 'Sign In' },
                         { key: 'register', label: 'Create Account' },
                     ].map(m => (
                         <button
@@ -319,7 +319,7 @@ export default function Login({ onLogin }) {
                                             type="button"
                                             onClick={() => setRole(r.value)}
                                             style={{
-                                                padding: '10px 12px', border: 'none', cursor: 'pointer',
+                                                padding: '10px 12px', cursor: 'pointer',
                                                 borderRadius: 10, textAlign: 'left',
                                                 background: isActive ? `${r.color}20` : 'rgba(255,255,255,0.03)',
                                                 border: `1px solid ${isActive ? r.color + '55' : 'var(--glass-border)'}`,

@@ -3,7 +3,6 @@ import Modal from '@/components/Modal';
 import fuelService from '../services/fuelService';
 import vehicleService from '../services/vehicleService';
 import tripService from '../services/tripService';
-import SkeletonTable from '@/components/SkeletonTable';
 
 const EMPTY = { vehicle_id: '', trip_id: '', date: '', liters: '', cost: '', odometer: '' };
 
@@ -40,10 +39,7 @@ export default function FuelLogs() {
 
     const vehicleName = (idOrObj) => {
         if (!idOrObj) return 'Unknown';
-        // If it's a populated object
         if (typeof idOrObj === 'object' && idOrObj.name) return idOrObj.name;
-
-        // Ensure we are working with a string ID for comparison
         const idStr = String(typeof idOrObj === 'object' ? (idOrObj._id || idOrObj.id) : idOrObj);
         const v = vehicles.find(v => String(v._id || v.id) === idStr);
         return v ? v.name : `Vehicle #${idStr.slice(-6)}`;
@@ -88,23 +84,22 @@ export default function FuelLogs() {
 
     // Per-vehicle totals
     const perVehicle = vehicles.map(v => {
-        const vid = String(v._id || v.id);
-        const logs = fuelLogs.filter(f => String(f.vehicle_id?._id || f.vehicle_id?.id || f.vehicle_id) === vid);
-        const vCost = logs.reduce((s, f) => s + (f.cost || 0), 0);
-        const vLiters = logs.reduce((s, f) => s + (f.liters || 0), 0);
-        return { ...v, totalCost: vCost, totalLiters: vLiters };
+        const logs = fuelLogs.filter(f => f.vehicle_id === (v._id || v.id));
+        const totalCost = logs.reduce((s, f) => s + (f.cost || 0), 0);
+        const totalLiters = logs.reduce((s, f) => s + (f.liters || 0), 0);
+        return { ...v, totalCost, totalLiters };
     }).filter(v => v.totalCost > 0);
 
-    if (loading) return <SkeletonTable rows={8} cols={7} />;
+    if (loading) {
+        return <div className="loading">Loading fuel logs...</div>;
+    }
 
     return (
         <div className="fade-in">
-            <div className="page-header" style={{ marginBottom: '2rem' }}>
+            <div className="page-header">
                 <div>
-                    <h1 className="page-title">Fuel & Expense Logs</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>
-                        {fuelLogs.length} entries · {totalLiters.toFixed(1)}L · ${totalCost.toLocaleString()} total
-                    </p>
+                    <div className="page-title">Fuel & Expense Logs</div>
+                    <div className="page-sub">{fuelLogs.length} entries · {totalLiters.toFixed(1)}L · ${totalCost.toLocaleString()} total</div>
                 </div>
                 <button className="btn btn-primary" onClick={() => { setForm(EMPTY); setModal(true); }}>+ Add Entry</button>
             </div>
@@ -140,7 +135,7 @@ export default function FuelLogs() {
 
             <div className="table-wrapper">
                 <div className="table-toolbar">
-                    <h3 className="table-toolbar-title">Transaction History</h3>
+                    <span className="table-toolbar-title">All Entries</span>
                 </div>
                 <table className="data-table">
                     <thead>
@@ -169,18 +164,18 @@ export default function FuelLogs() {
 
             {modal && (
                 <Modal
-                    title="Log Fuel Transaction"
+                    title="Add Fuel Entry"
                     onClose={() => setModal(false)}
                     footer={
                         <>
                             <button className="btn btn-secondary" onClick={() => setModal(false)}>Cancel</button>
-                            <button className="btn btn-primary" onClick={handleSave}>Confirm Entry</button>
+                            <button className="btn btn-primary" onClick={handleSave}>Save Entry</button>
                         </>
                     }
                 >
                     <div className="form-grid">
-                        <div className="form-group form-grid-full">
-                            <label className="form-label">Vehicle Asset</label>
+                        <div className="form-group">
+                            <label className="form-label">Vehicle</label>
                             <select
                                 className="form-control"
                                 value={form.vehicle_id}

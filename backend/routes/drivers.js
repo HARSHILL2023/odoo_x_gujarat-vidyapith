@@ -30,14 +30,29 @@ router.get('/:id/license-valid', async (req, res) => {
         if (!driver) {
             return res.json({ valid: false });
         }
-        
+
         const today = new Date();
         const expiry = new Date(driver.license_expiry);
         const isValid = expiry > today;
-        
+
         res.json({ valid: isValid });
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+// PUT update driver
+router.put('/:id', async (req, res) => {
+    try {
+        const driver = await Driver.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+        );
+        if (!driver) return res.status(404).json({ error: 'Driver not found' });
+        res.json(driver);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
     }
 });
 
@@ -51,6 +66,16 @@ router.put('/:id/status', async (req, res) => {
             { new: true }
         );
         res.json(driver);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// DELETE driver
+router.delete('/:id', async (req, res) => {
+    try {
+        await Driver.findByIdAndDelete(req.params.id);
+        res.json({ success: true, message: 'Driver deleted successfully' });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }

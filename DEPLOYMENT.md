@@ -40,36 +40,48 @@ Follow these steps to deploy your Fleet Management System to production.
    - Click **"Connect"**.
    - **Note**: You will see system databases like `admin`, `config`, and `local`. This is normal. Your application data will appear in a `fleetflow` database once the backend is connected and running.
 
-## 3. Backend Deployment (Render)
+## 3. Backend Deployment (Render or Vercel)
+
+### Option A: Render (Standard)
 1. Sign in to Render and click **New** -> **Web Service**.
 2. Connect your GitHub repository.
 3. Set the following:
    - **Name**: `fleetflow-api`
-   - **Root Directory**: `backend`
+   - **Root Directory**: `V2/fleetflow-api`
    - **Runtime**: `Node`
    - **Build Command**: `npm install`
    - **Start Command**: `npm start`
-4. Go to **Environment** and add:
-   - `MONGODB_URI`: (Your MongoDB Atlas connection string)
-   - `FRONTEND_URL`: (The URL of your frontend once deployed)
-   - `JWT_SECRET`: (A strong random string)
+4. Go to **Environment** and add the variables listed below.
+
+### Option B: Vercel (All-in-one)
+1. Sign in to Vercel and click **Add New** -> **Project**.
+2. Connect your GitHub repository.
+3. In **Project Settings**:
+   - **Root Directory**: `V2/fleetflow-api`
+   - **Framework Preset**: `Other` (It will detect `vercel.json`)
+4. Add the **Environment Variables** listed below and click **Deploy**.
+
+### Backend Environment Variables
+- `MONGODB_URI`: (Your MongoDB Atlas connection string)
+- `CLIENT_ORIGIN`: (The URL of your frontend once deployed)
+- `JWT_SECRET`: (A strong random string)
 
 ## 4. Frontend Deployment (Vercel)
 1. Sign in to Vercel and click **Add New** -> **Project**.
 2. Connect your GitHub repository.
 3. In **Project Settings**:
-   - **Root Directory**: `frontend/fleetflow-ui`
+   - **Root Directory**: `V2/fleetflow-ui`
    - **Framework Preset**: `Vite`
    - **Build Command**: `npm run build`
    - **Output Directory**: `dist`
 4. Under **Environment Variables**, add:
-   - `VITE_API_URL`: `https://your-backend-url.onrender.com/api`
+   - `VITE_API_URL`: `https://your-backend-url.vercel.app/api` (or render URL)
 5. Click **Deploy**.
 
 ## 5. Final Connection
-- Once the Vercel app is deployed, copy its URL.
-- Go back to Render -> Environment -> `FRONTEND_URL` and update it with the Vercel URL.
-- redeploy the backend.
+- Once the Vercel UI app is deployed, copy its URL.
+- Go back to your Backend settings (Render or Vercel) -> Environment -> `CLIENT_ORIGIN` and update it with the Vercel UI URL.
+- Redeploy the backend if necessary.
 
 ---
 **Congratulations! Your FleetFlow system is now live.**

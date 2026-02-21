@@ -45,7 +45,12 @@ app.get('/', (_req, res) => {
 });
 
 app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', db: 'mongodb', timestamp: new Date().toISOString() });
+    const mongoStatus = ['disconnected', 'connected', 'connecting', 'disconnecting'][require('mongoose').connection.readyState];
+    res.json({
+        status: 'ok',
+        db: mongoStatus,
+        timestamp: new Date().toISOString()
+    });
 });
 
 // ─── Routes ─────────────────────────────────────────────────

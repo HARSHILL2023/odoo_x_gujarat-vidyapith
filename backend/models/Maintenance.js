@@ -17,6 +17,11 @@ const maintenanceSchema = new mongoose.Schema({
     service_date: {
         type: Date,
         default: Date.now
+    },
+    status: {
+        type: String,
+        enum: ['Pending', 'Completed'],
+        default: 'Pending'
     }
 }, {
     timestamps: true

@@ -86,25 +86,27 @@ function AppShell({ user, onLogout, theme, toggleTheme }) {
             </span>
           </div>
         </header>
-        <main className="page-content fade-in">
-          <Routes>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/vehicles" element={<Vehicles />} />
-            <Route path="/drivers" element={<Drivers />} />
-            <Route path="/trips" element={<Trips />} />
-            <Route path="/maintenance" element={<Maintenance />} />
-            <Route path="/fuel" element={
-              <ProtectedRoute allowedRoles={['Fleet Manager', 'Finance Admin', 'Dispatcher']} user={user}>
-                <FuelLogs />
-              </ProtectedRoute>
-            } />
-            <Route path="/analytics" element={
-              <ProtectedRoute allowedRoles={['Fleet Manager']} user={user}>
-                <Analytics />
-              </ProtectedRoute>
-            } />
-            <Route path="*" element={<Navigate to="/dashboard" />} />
-          </Routes>
+        <main className="page-content">
+          <div className="animate-in">
+            <Routes>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/vehicles" element={<Vehicles />} />
+              <Route path="/drivers" element={<Drivers />} />
+              <Route path="/trips" element={<Trips />} />
+              <Route path="/maintenance" element={<Maintenance />} />
+              <Route path="/fuel" element={
+                <ProtectedRoute allowedRoles={['Fleet Manager', 'Finance Admin', 'Dispatcher']} user={user}>
+                  <FuelLogs />
+                </ProtectedRoute>
+              } />
+              <Route path="/analytics" element={
+                <ProtectedRoute allowedRoles={['Fleet Manager']} user={user}>
+                  <Analytics />
+                </ProtectedRoute>
+              } />
+              <Route path="*" element={<Navigate to="/dashboard" />} />
+            </Routes>
+          </div>
         </main>
       </div>
     </div>

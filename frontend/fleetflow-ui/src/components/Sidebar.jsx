@@ -52,13 +52,23 @@ export default function Sidebar({ user, onLogout }) {
                     <div className="sidebar-avatar">
                         {user?.name?.[0] || 'A'}
                     </div>
-                    <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-primary)' }}>{user?.name}</div>
-                        <div style={{ fontSize: 10 }}>{user?.role}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{user?.role}</div>
                     </div>
                     <button
                         onClick={onLogout}
-                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 14 }}
+                        style={{
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid var(--glass-border)',
+                            color: 'var(--text-muted)',
+                            cursor: 'pointer',
+                            fontSize: 14,
+                            padding: '6px',
+                            borderRadius: '8px',
+                            transition: 'var(--transition)'
+                        }}
+                        className="btn-icon-hover"
                         title="Logout"
                     >⎋</button>
                 </div>

@@ -1,61 +1,230 @@
-import { useState } from 'react';
-import { useFleet } from '../context/FleetContext';
-import StatusBadge from '../components/StatusBadge';
-import Modal from '../components/Modal';
+import { useState, useEffect } from 'react';
+import StatusBadge from '@/components/StatusBadge';
+import Modal from '@/components/Modal';
+import tripService from '../services/tripService';
+import vehicleService from '../services/vehicleService';
+import driverService from '../services/driverService';
 
-const EMPTY = { vehicleId: '', driverId: '', origin: '', destination: '', cargoWeight: '', dateStart: '', odometerStart: '' };
-const STATES = ['draft', 'dispatched', 'completed', 'cancelled'];
+const EMPTY = {
+    vehicle_id: '',
+    driver_id: '',
+    start_location: '',
+    end_location: '',
+    cargo_weight: '',
+    start_time: '',
+    odometer_start: ''
+};
+
+const STATUSES = ['Draft', 'Dispatched', 'Completed', 'Cancelled'];
 
 export default function Trips() {
-    const { trips, vehicles, drivers, addTrip, dispatchTrip, completeTrip, cancelTrip, isLicenseExpired } = useFleet();
+    const [trips, setTrips] = useState([]);
+    const [vehicles, setVehicles] = useState([]);
+    const [drivers, setDrivers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
     const [view, setView] = useState('kanban');
     const [modal, setModal] = useState(false);
     const [form, setForm] = useState(EMPTY);
-    const [error, setError] = useState('');
+    const [formError, setFormError] = useState('');
     const [search, setSearch] = useState('');
 
-    const availableVehicles = vehicles.filter(v => v.status === 'available');
-    const availableDrivers = drivers.filter(d => d.status !== 'suspended' && !isLicenseExpired(d));
+    // Fetch all data on component mount
+    useEffect(() => {
+        fetchAllData();
+    }, []);
 
-    const handleCreate = () => {
-        setError('');
-        const vehicle = vehicles.find(v => v.id === Number(form.vehicleId));
-        if (!vehicle) { setError('Select a vehicle.'); return; }
-        if (!form.driverId) { setError('Select a driver.'); return; }
-        if (Number(form.cargoWeight) > vehicle.maxCapacity) {
-            setError(`⚠ Cargo weight (${form.cargoWeight} kg) exceeds vehicle capacity (${vehicle.maxCapacity} kg)!`);
-            return;
+    const fetchAllData = async () => {
+        try {
+            setLoading(true);
+            const [tripsData, vehiclesData, driversData] = await Promise.all([
+                tripService.getAll(),
+                vehicleService.getAll(),
+                driverService.getAll()
+            ]);
+            setTrips(tripsData);
+            setVehicles(vehiclesData);
+            setDrivers(driversData);
+            setError('');
+        } catch (err) {
+            setError('Failed to fetch data');
+            console.error(err);
+        } finally {
+            setLoading(false);
         }
-        addTrip({ ...form, vehicleId: Number(form.vehicleId), driverId: Number(form.driverId), cargoWeight: Number(form.cargoWeight), odometerStart: Number(form.odometerStart) });
-        setModal(false);
-        setForm(EMPTY);
     };
 
-    const filtered = trips.filter(t => {
-        const q = search.toLowerCase();
-        return !q || t.reference?.toLowerCase().includes(q) || t.origin?.toLowerCase().includes(q) || t.destination?.toLowerCase().includes(q);
+    // Filter available vehicles
+    const availableVehicles = vehicles.filter(v => v.status === 'Available');
+
+    const availableDrivers = drivers.filter(d => {
+        if (!d.status) return false;
+        const s = d.status.toLowerCase().trim();
+        if (s !== 'on duty') return false;
+
+        if (!d.license_expiry) return true;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const expiry = new Date(d.license_expiry);
+        expiry.setHours(0, 0, 0, 0);
+        return expiry >= today;
     });
 
-    const vehicleName = (id) => vehicles.find(v => v.id === id)?.name || `Vehicle #${id}`;
-    const driverName = (id) => drivers.find(d => d.id === id)?.name || `Driver #${id}`;
+    const handleCreate = async () => {
+        setFormError('');
 
-    const KanbanCard = ({ trip }) => (
-        <div className="kanban-card">
-            <div className="kanban-card-ref">{trip.reference}</div>
-            <div className="kanban-card-route">{trip.origin} → {trip.destination}</div>
-            <div className="kanban-card-meta">
-                <span>🚛 {vehicleName(trip.vehicleId)}</span>
-                <span>👤 {driverName(trip.driverId)}</span>
-                <span>📦 {trip.cargoWeight} kg</span>
-                {trip.dateStart && <span>📅 {trip.dateStart?.slice(0, 10)}</span>}
+        // Validate form
+        if (!form.vehicle_id) {
+            setFormError('Please select a vehicle');
+            return;
+        }
+        if (!form.driver_id) {
+            setFormError('Please select a driver');
+            return;
+        }
+        if (!form.start_location) {
+            setFormError('Please enter origin');
+            return;
+        }
+        if (!form.end_location) {
+            setFormError('Please enter destination');
+            return;
+        }
+        if (!form.cargo_weight || form.cargo_weight <= 0) {
+            setFormError('Please enter valid cargo weight');
+            return;
+        }
+
+        try {
+            const tripData = {
+                vehicle_id: form.vehicle_id,
+                driver_id: form.driver_id,
+                start_location: form.start_location,
+                end_location: form.end_location,
+                cargo_weight: Number(form.cargo_weight),
+                start_time: form.start_time || new Date().toISOString(),
+                odometer_start: form.odometer_start ? Number(form.odometer_start) : null
+            };
+
+            const newTrip = await tripService.create(tripData);
+            setTrips([newTrip.trip, ...trips]);
+
+            // Refresh vehicles and drivers to get updated statuses
+            const [updatedVehicles, updatedDrivers] = await Promise.all([
+                vehicleService.getAll(),
+                driverService.getAll()
+            ]);
+            setVehicles(updatedVehicles);
+            setDrivers(updatedDrivers);
+
+            setModal(false);
+            setForm(EMPTY);
+        } catch (err) {
+            setFormError(err.message || 'Failed to create trip');
+            console.error(err);
+        }
+    };
+
+    const handleDispatch = async (tripId) => {
+        // In your backend, trips are created as 'Dispatched' directly
+        // This might just refresh the data
+        fetchAllData();
+    };
+
+    const handleComplete = async (tripId) => {
+        const odometer = prompt('Enter final odometer reading:');
+        if (!odometer) return;
+
+        try {
+            await tripService.complete(tripId, Number(odometer));
+            fetchAllData(); // Refresh all data
+        } catch (err) {
+            setError('Failed to complete trip');
+            console.error(err);
+        }
+    };
+
+    const handleCancel = async (tripId) => {
+        if (!window.confirm('Cancel this trip?')) return;
+
+        try {
+            // You'll need to add this to your tripService
+            await tripService.cancel(tripId);
+            fetchAllData();
+        } catch (err) {
+            setError('Failed to cancel trip');
+            console.error(err);
+        }
+    };
+
+    // Filter trips based on search
+    const filtered = trips.filter(t => {
+        const q = search.toLowerCase();
+        const vehicle = vehicles.find(v => v._id === t.vehicle_id || v.id === t.vehicle_id);
+        const driver = drivers.find(d => d._id === t.driver_id || d.id === t.driver_id);
+
+        return !q ||
+            (vehicle?.name?.toLowerCase().includes(q)) ||
+            (driver?.name?.toLowerCase().includes(q)) ||
+            (t.start_location?.toLowerCase().includes(q)) ||
+            (t.end_location?.toLowerCase().includes(q));
+    });
+
+    const getVehicleName = (idOrObj) => {
+        if (!idOrObj) return 'Unknown';
+        if (typeof idOrObj === 'object' && idOrObj.name) return idOrObj.name;
+        const idStr = String(typeof idOrObj === 'object' ? (idOrObj._id || idOrObj.id) : idOrObj);
+        const v = vehicles.find(v => String(v._id || v.id) === idStr);
+        return v ? `${v.name} (${v.license_plate})` : `Vehicle #${idStr.slice(-6)}`;
+    };
+
+    const getDriverName = (idOrObj) => {
+        if (!idOrObj) return 'Unknown';
+        if (typeof idOrObj === 'object' && idOrObj.name) return idOrObj.name;
+        const idStr = String(typeof idOrObj === 'object' ? (idOrObj._id || idOrObj.id) : idOrObj);
+        const d = drivers.find(d => String(d._id || d.id) === idStr);
+        return d ? d.name : `Driver #${idStr.slice(-6)}`;
+    };
+
+    const KanbanCard = ({ trip }) => {
+        const vehicle = vehicles.find(v => v._id === trip.vehicle_id || v.id === trip.vehicle_id);
+        const driver = drivers.find(d => d._id === trip.driver_id || d.id === trip.driver_id);
+
+        return (
+            <div className="kanban-card">
+                <div className="kanban-card-ref">Trip #{trip._id?.slice(-6) || trip.id}</div>
+                <div className="kanban-card-route">{trip.start_location} → {trip.end_location}</div>
+                <div className="kanban-card-meta">
+                    <span>🚛 {vehicle?.name || 'Unknown'}</span>
+                    <span>👤 {driver?.name || 'Unknown'}</span>
+                    <span>📦 {trip.cargo_weight} kg</span>
+                    {trip.start_time && <span>📅 {new Date(trip.start_time).toLocaleDateString()}</span>}
+                </div>
+                <div className="kanban-card-actions">
+                    {trip.status === 'Dispatched' && (
+                        <>
+                            <button
+                                className="btn btn-success btn-sm"
+                                onClick={() => handleComplete(trip._id || trip.id)}
+                            >
+                                Complete
+                            </button>
+                            <button
+                                className="btn btn-danger btn-sm"
+                                onClick={() => handleCancel(trip._id || trip.id)}
+                            >
+                                Cancel
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
-            <div className="kanban-card-actions">
-                {trip.state === 'draft' && <button className="btn btn-primary btn-sm" onClick={() => dispatchTrip(trip.id)}>Dispatch</button>}
-                {trip.state === 'dispatched' && <button className="btn btn-success btn-sm" onClick={() => completeTrip(trip.id)}>Complete</button>}
-                {trip.state === 'dispatched' && <button className="btn btn-danger  btn-sm" onClick={() => cancelTrip(trip.id)}>Cancel</button>}
-            </div>
-        </div>
-    );
+        );
+    };
+
+    if (loading) {
+        return <div className="loading">Loading trips...</div>;
+    }
 
     return (
         <div className="fade-in">
@@ -65,9 +234,21 @@ export default function Trips() {
                     <div className="page-sub">{trips.length} total trips</div>
                 </div>
                 <div className="page-actions">
-                    <div style={{ display: 'flex', gap: 4, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 3 }}>
+                    <div style={{
+                        display: 'flex',
+                        gap: 4,
+                        background: 'var(--bg-card)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 'var(--radius-sm)',
+                        padding: 3
+                    }}>
                         {['kanban', 'list'].map(v => (
-                            <button key={v} className={`btn btn-sm ${view === v ? 'btn-primary' : 'btn-secondary'}`} style={{ border: 'none' }} onClick={() => setView(v)}>
+                            <button
+                                key={v}
+                                className={`btn btn-sm ${view === v ? 'btn-primary' : 'btn-secondary'}`}
+                                style={{ border: 'none' }}
+                                onClick={() => setView(v)}
+                            >
                                 {v === 'kanban' ? '⬛ Board' : '☰ List'}
                             </button>
                         ))}
@@ -76,23 +257,38 @@ export default function Trips() {
                 </div>
             </div>
 
+            {error && (
+                <div className="alert alert-danger" style={{ margin: '1rem 0' }}>
+                    {error}
+                </div>
+            )}
+
             {view === 'kanban' ? (
                 <div className="kanban-board">
-                    {STATES.map(state => {
-                        const col = trips.filter(t => t.state === state);
-                        const colColors = { draft: 'var(--gray-t)', dispatched: 'var(--blue-t)', completed: 'var(--green-t)', cancelled: 'var(--red-t)' };
+                    {STATUSES.map(status => {
+                        const col = filtered.filter(t => t.status === status);
+                        const colColors = {
+                            Draft: 'var(--gray-t)',
+                            Dispatched: 'var(--blue-t)',
+                            Completed: 'var(--green-t)',
+                            Cancelled: 'var(--red-t)'
+                        };
                         return (
-                            <div key={state} className="kanban-col">
+                            <div key={status} className="kanban-col">
                                 <div className="kanban-col-header">
-                                    <span className="kanban-col-title" style={{ color: colColors[state] }}>
-                                        {state.charAt(0).toUpperCase() + state.slice(1)}
+                                    <span className="kanban-col-title" style={{ color: colColors[status] }}>
+                                        {status}
                                     </span>
                                     <span className="kanban-col-count">{col.length}</span>
                                 </div>
                                 <div className="kanban-cards">
-                                    {col.length === 0
-                                        ? <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0' }}>No trips</div>
-                                        : col.map(t => <KanbanCard key={t.id} trip={t} />)}
+                                    {col.length === 0 ? (
+                                        <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0' }}>
+                                            No trips
+                                        </div>
+                                    ) : (
+                                        col.map(t => <KanbanCard key={t._id || t.id} trip={t} />)
+                                    )}
                                 </div>
                             </div>
                         );
@@ -104,31 +300,51 @@ export default function Trips() {
                         <span className="table-toolbar-title">All Trips</span>
                         <div className="search-wrap">
                             <span className="search-icon">🔍</span>
-                            <input className="search-input" placeholder="Search trips…" value={search} onChange={e => setSearch(e.target.value)} />
+                            <input
+                                className="search-input"
+                                placeholder="Search trips…"
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                            />
                         </div>
                     </div>
                     <table className="data-table">
                         <thead>
                             <tr>
-                                <th>Reference</th><th>Vehicle</th><th>Driver</th>
+                                <th>ID</th><th>Vehicle</th><th>Driver</th>
                                 <th>Route</th><th>Cargo</th><th>Date</th><th>Status</th><th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filtered.map(t => (
-                                <tr key={t.id}>
-                                    <td className="font-mono">{t.reference}</td>
-                                    <td>{vehicleName(t.vehicleId)}</td>
-                                    <td>{driverName(t.driverId)}</td>
-                                    <td style={{ fontSize: 12 }}>{t.origin} → {t.destination}</td>
-                                    <td>{t.cargoWeight} kg</td>
-                                    <td className="text-muted">{t.dateStart?.slice(0, 10) || '—'}</td>
-                                    <td><StatusBadge status={t.state} /></td>
+                                <tr key={t._id || t.id}>
+                                    <td className="font-mono">#{String(t._id || t.id).slice(-6)}</td>
+                                    <td>{getVehicleName(t.vehicle_id)}</td>
+                                    <td>{getDriverName(t.driver_id)}</td>
+                                    <td style={{ fontSize: 12 }}>{t.start_location} → {t.end_location}</td>
+                                    <td>{t.cargo_weight} kg</td>
+                                    <td className="text-muted">
+                                        {t.start_time ? new Date(t.start_time).toLocaleDateString() : '—'}
+                                    </td>
+                                    <td><StatusBadge status={t.status} /></td>
                                     <td>
                                         <div className="actions">
-                                            {t.state === 'draft' && <button className="btn btn-primary btn-sm" onClick={() => dispatchTrip(t.id)}>Dispatch</button>}
-                                            {t.state === 'dispatched' && <button className="btn btn-success btn-sm" onClick={() => completeTrip(t.id)}>Complete</button>}
-                                            {t.state === 'dispatched' && <button className="btn btn-danger  btn-sm" onClick={() => cancelTrip(t.id)}>Cancel</button>}
+                                            {t.status === 'Dispatched' && (
+                                                <>
+                                                    <button
+                                                        className="btn btn-success btn-sm"
+                                                        onClick={() => handleComplete(t._id || t.id)}
+                                                    >
+                                                        Complete
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-danger btn-sm"
+                                                        onClick={() => handleCancel(t._id || t.id)}
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
@@ -141,51 +357,106 @@ export default function Trips() {
             {modal && (
                 <Modal
                     title="Create New Trip"
-                    onClose={() => { setModal(false); setError(''); setForm(EMPTY); }}
-                    footer={<>
-                        <button className="btn btn-secondary" onClick={() => { setModal(false); setError(''); setForm(EMPTY); }}>Cancel</button>
-                        <button className="btn btn-primary" onClick={handleCreate}>Create Trip</button>
-                    </>}
+                    onClose={() => {
+                        setModal(false);
+                        setFormError('');
+                        setForm(EMPTY);
+                    }}
+                    footer={
+                        <>
+                            <button
+                                className="btn btn-secondary"
+                                onClick={() => {
+                                    setModal(false);
+                                    setFormError('');
+                                    setForm(EMPTY);
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button className="btn btn-primary" onClick={handleCreate}>
+                                Create Trip
+                            </button>
+                        </>
+                    }
                 >
-                    {error && <div className="alert alert-danger mb-4">{error}</div>}
+                    {formError && <div className="alert alert-danger mb-4">{formError}</div>}
                     <div className="form-grid">
                         <div className="form-group">
                             <label className="form-label">Vehicle (Available)</label>
-                            <select className="form-control" value={form.vehicleId} onChange={e => setForm({ ...form, vehicleId: e.target.value })}>
+                            <select
+                                className="form-control"
+                                value={form.vehicle_id}
+                                onChange={e => setForm({ ...form, vehicle_id: e.target.value })}
+                            >
                                 <option value="">Select vehicle…</option>
                                 {availableVehicles.map(v => (
-                                    <option key={v.id} value={v.id}>{v.name} – {v.licensePlate} (max {v.maxCapacity} kg)</option>
+                                    <option key={v._id || v.id} value={v._id || v.id}>
+                                        {v.name} – {v.license_plate} (max {v.max_load} kg)
+                                    </option>
                                 ))}
                             </select>
                         </div>
                         <div className="form-group">
                             <label className="form-label">Driver (Available)</label>
-                            <select className="form-control" value={form.driverId} onChange={e => setForm({ ...form, driverId: e.target.value })}>
+                            <select
+                                className="form-control"
+                                value={form.driver_id}
+                                onChange={e => setForm({ ...form, driver_id: e.target.value })}
+                            >
                                 <option value="">Select driver…</option>
                                 {availableDrivers.map(d => (
-                                    <option key={d.id} value={d.id}>{d.name} – {d.licenseCategory}</option>
+                                    <option key={d._id || d.id} value={d._id || d.id}>
+                                        {d.name} – {d.license_category} (Exp: {new Date(d.license_expiry).toLocaleDateString()})
+                                    </option>
                                 ))}
                             </select>
                         </div>
                         <div className="form-group">
                             <label className="form-label">Origin</label>
-                            <input className="form-control" placeholder="Pickup location" value={form.origin} onChange={e => setForm({ ...form, origin: e.target.value })} />
+                            <input
+                                className="form-control"
+                                placeholder="Pickup location"
+                                value={form.start_location}
+                                onChange={e => setForm({ ...form, start_location: e.target.value })}
+                            />
                         </div>
                         <div className="form-group">
                             <label className="form-label">Destination</label>
-                            <input className="form-control" placeholder="Drop location" value={form.destination} onChange={e => setForm({ ...form, destination: e.target.value })} />
+                            <input
+                                className="form-control"
+                                placeholder="Drop location"
+                                value={form.end_location}
+                                onChange={e => setForm({ ...form, end_location: e.target.value })}
+                            />
                         </div>
                         <div className="form-group">
                             <label className="form-label">Cargo Weight (kg)</label>
-                            <input className="form-control" type="number" placeholder="kg" value={form.cargoWeight} onChange={e => setForm({ ...form, cargoWeight: e.target.value })} />
+                            <input
+                                className="form-control"
+                                type="number"
+                                placeholder="kg"
+                                value={form.cargo_weight}
+                                onChange={e => setForm({ ...form, cargo_weight: e.target.value })}
+                            />
                         </div>
                         <div className="form-group">
                             <label className="form-label">Departure Date</label>
-                            <input className="form-control" type="datetime-local" value={form.dateStart} onChange={e => setForm({ ...form, dateStart: e.target.value })} />
+                            <input
+                                className="form-control"
+                                type="datetime-local"
+                                value={form.start_time}
+                                onChange={e => setForm({ ...form, start_time: e.target.value })}
+                            />
                         </div>
                         <div className="form-group form-grid-full">
                             <label className="form-label">Odometer at Start (km)</label>
-                            <input className="form-control" type="number" value={form.odometerStart} onChange={e => setForm({ ...form, odometerStart: e.target.value })} />
+                            <input
+                                className="form-control"
+                                type="number"
+                                value={form.odometer_start}
+                                onChange={e => setForm({ ...form, odometer_start: e.target.value })}
+                            />
                         </div>
                     </div>
                 </Modal>

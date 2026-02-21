@@ -8,9 +8,11 @@ const LABELS = {
 };
 
 export default function StatusBadge({ status }) {
+    if (!status) return null;
+    const s = String(status).toLowerCase().trim().replace(/\s+/g, '_');
     return (
-        <span className={`badge badge-${status}`}>
-            {LABELS[status] || status}
+        <span className={`badge badge-${s}`}>
+            {LABELS[s] || status}
         </span>
     );
 }

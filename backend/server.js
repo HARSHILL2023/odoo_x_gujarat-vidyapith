@@ -24,9 +24,22 @@ app.use(express.json());
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/fleetflow';
 
-mongoose.connect(MONGODB_URI)
-    .then(() => console.log('✅ Connected to MongoDB'))
-    .catch(err => console.error('❌ MongoDB connection error:', err));
+console.log('📡 Attempting to connect to MongoDB...');
+// Log sanitized URI (hide password)
+const sanitizedUri = MONGODB_URI.replace(/:([^@]+)@/, ':****@');
+console.log(`🔌 Connection String: ${sanitizedUri}`);
+
+mongoose.connect(MONGODB_URI, {
+    serverSelectionTimeoutMS: 5000 // Timeout after 5s instead of 30s
+})
+    .then(() => console.log('✅ Connected to MongoDB successfully'))
+    .catch(err => {
+        console.error('❌ MongoDB connection error detail:');
+        console.error(err.message);
+        if (err.name === 'MongooseServerSelectionError') {
+            console.error('👉 Tip: Check your IP Whitelist in MongoDB Atlas and your password in Render.');
+        }
+    });
 
 app.get('/', (req, res) => {
     res.send('FleetFlow Backend API is LIVE! Access endpoints via /api');

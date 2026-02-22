@@ -587,14 +587,14 @@ export default function Drivers() {
         <div className="fade-in">
 
             {/* ── Page Actions ────────────────────────────────── */}
-            <div className="page-header" style={{ marginBottom: 20, justifyContent: 'flex-end' }}>
-                <div className="page-sub" style={{ marginRight: 'auto' }}>
+            <div className="page-header">
+                <div className="page-sub">
                     {totalDrivers} registered · {onDutyCount} on duty
                 </div>
                 <div className="page-actions">
                     <select
                         className="form-control"
-                        style={{ width: 148 }}
+                        style={{ flex: 1, height: 34, fontSize: 12, minWidth: 120 }}
                         value={filterStatus}
                         onChange={e => setFilterStatus(e.target.value)}
                     >
@@ -603,7 +603,7 @@ export default function Drivers() {
                         <option value="off_duty">Off Duty</option>
                         <option value="suspended">Suspended</option>
                     </select>
-                    <button className="btn btn-primary" onClick={openAdd} aria-label="Add new driver">
+                    <button className="btn btn-primary" onClick={openAdd} aria-label="Add new driver" style={{ flex: '1 0 100%', justifyContent: 'center', marginTop: 4 }}>
                         <Plus size={14} aria-hidden="true" /> Add Driver
                     </button>
                 </div>
@@ -655,14 +655,14 @@ export default function Drivers() {
                     </span>
 
                     {/* Search with clear button */}
-                    <div className="search-wrap" style={{ position: 'relative' }}>
+                    <div className="search-wrap" style={{ position: 'relative', flex: '1 1 200px' }}>
                         <span className="search-icon"><Search size={14} /></span>
                         <input
                             className="search-input"
                             placeholder="Search name, license or phone…"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            style={{ paddingRight: search ? 28 : undefined }}
+                            style={{ paddingRight: search ? 28 : undefined, width: '100%' }}
                         />
                         {search && (
                             <button

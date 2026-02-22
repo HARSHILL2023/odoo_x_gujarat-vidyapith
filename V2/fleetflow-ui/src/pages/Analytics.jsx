@@ -152,23 +152,25 @@ function ExportDropdown({ onTrips, onFuel, onMaintenance, onROI }) {
     ];
 
     return (
-        <div ref={ref} style={{ position: 'relative' }}>
+        <div ref={ref} style={{ position: 'relative', flex: '1 0 auto' }}>
             <button
                 className="btn btn-secondary"
                 onClick={() => setOpen(o => !o)}
                 aria-label="Export options"
                 aria-expanded={open}
                 aria-haspopup="true"
-                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', justifyContent: 'center' }}
             >
                 <Download size={13} strokeWidth={2.2} aria-hidden="true" />
-                Export
+                <span className="desktop-only">Export Data</span>
+                <span className="mobile-only">Export</span>
                 <ChevronDown
                     size={12} strokeWidth={2.5}
                     aria-hidden="true"
                     style={{
                         transition: 'transform 0.18s ease',
                         transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+                        marginLeft: 'auto'
                     }}
                 />
             </button>
@@ -363,7 +365,10 @@ const CostDonut = memo(function CostDonut({ fuel, maint }) {
     const fuelDash = (fuelPct / 100) * circumference;
 
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '20px 24px' }}>
+        <div style={{
+            display: 'flex', alignItems: 'center', gap: 24, padding: '20px 24px',
+            flexWrap: 'wrap', justifyContent: 'center'
+        }}>
             <svg width={90} height={90} style={{ flexShrink: 0, transform: 'rotate(-90deg)' }} aria-label={`Cost breakdown: Fuel ${fuelPct}%, Maintenance ${maintPct}%`}>
                 <circle cx={45} cy={45} r={36} fill="none"
                     stroke="rgba(255,255,255,0.06)" strokeWidth={10} aria-hidden="true" />
@@ -382,7 +387,7 @@ const CostDonut = memo(function CostDonut({ fuel, maint }) {
                     style={{ transition: 'all 1s ease', filter: 'drop-shadow(0 0 6px #fb923c80)' }} />
             </svg>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 140 }}>
                 {[
                     { label: 'Fuel', pct: fuelPct, cost: fuel, color: '#38bdf8' },
                     { label: 'Maintenance', pct: maintPct, cost: maint, color: '#fb923c' },
@@ -668,12 +673,8 @@ export default function Analytics() {
             <div className="kpi-grid" style={{ marginBottom: 28 }}>
                 {Array.from({ length: 4 }).map((_, i) => <Skeleton.Stat key={i} />)}
             </div>
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: '300px 1fr',
-                gap: 16, marginBottom: 24,
-            }}>
-                <div className="table-wrapper ff-card" style={{ height: 200 }}>
+            <div className="dashboard-row">
+                <div className="table-wrapper ff-card" style={{ height: 'auto', minHeight: 200 }}>
                     <Skeleton width="120px" height="14px" style={{ margin: 20 }} />
                     <div style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '0 20px' }}>
                         <Skeleton circle width="70px" height="70px" />
@@ -766,7 +767,7 @@ export default function Analytics() {
         <div className="fade-in">
 
             {/* ── Page Actions ────────────────────────────────── */}
-            <div className="page-header" style={{ marginBottom: 20, justifyContent: 'flex-end' }}>
+            <div className="page-header">
                 <div className="page-actions">
                     {/* Period toggle */}
                     <div className="ff-view-toggle">
@@ -776,7 +777,7 @@ export default function Analytics() {
                                 onClick={() => setPeriod(p.key)}
                                 className={`ff-view-btn ${period === p.key ? 'active' : ''}`}
                             >
-                                {p.label}
+                                {p.label.replace('This ', '')}
                             </button>
                         ))}
                     </div>

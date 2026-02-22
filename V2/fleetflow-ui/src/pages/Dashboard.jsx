@@ -111,14 +111,13 @@ function QuickAction({ Icon, label, onClick, color = 'var(--accent)' }) {
             onClick={onClick}
             aria-label={label}
             style={{
-                flex: '1 1 0', minWidth: 90,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
                 padding: '16px 10px',
                 background: 'rgba(255,255,255,0.03)',
                 border: '1px solid var(--glass-border)',
                 borderRadius: 'var(--radius)',
                 cursor: 'pointer', transition: 'all 0.2s ease',
                 color: 'var(--text-secondary)',
+                width: '100%',
             }}
             onMouseEnter={e => {
                 const el = e.currentTarget;
@@ -425,7 +424,6 @@ export default function Dashboard() {
 
             {/* ── KPI Cards ───────────────────────────────── */}
             <div className="kpi-grid" style={{ marginBottom: 20 }}>
-
                 <div
                     className="kpi-card blue ff-card fade-in-scale"
                     style={{ cursor: 'pointer', animationDelay: '0ms' }}
@@ -552,11 +550,7 @@ export default function Dashboard() {
             )}
 
             {/* ── Mid Row: Fleet Health Donut + Activity Feed ── */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: '300px 1fr',
-                gap: 16, marginBottom: 16,
-            }}>
+            <div className="dashboard-row">
 
                 {/* Fleet Health Donut */}
                 <div className="stat-card ff-card" style={{ padding: '20px 20px 16px' }}>
@@ -717,7 +711,7 @@ export default function Dashboard() {
                 }}>
                     Quick Actions
                 </div>
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <div className="quick-actions-grid">
                     <QuickAction Icon={Truck} label="New Trip"
                         onClick={() => navigate('/trips')} color="var(--blue-t)" />
                     <QuickAction Icon={User} label="Add Driver"

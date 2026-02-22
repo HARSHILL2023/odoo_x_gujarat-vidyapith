@@ -6,7 +6,7 @@ import WelcomeModal from './components/WelcomeModal';
 import ToastContainer from './components/ToastContainer';
 import CommandPalette from './components/CommandPalette';
 import QuickActionFAB from './components/QuickActionFAB';
-import { Command, Moon, Sun, Loader2 } from 'lucide-react';
+import { Command, Moon, Sun, Loader2, Menu, X } from 'lucide-react';
 
 import Sidebar from './components/Sidebar';
 
@@ -51,25 +51,50 @@ const PAGE_TITLES = {
 function AppShell({ user, onLogout, theme, toggleTheme, onShowHelp }) {
   const location = useLocation();
   const meta = PAGE_TITLES[location.pathname] || {};
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   return (
     <>
       <div className="app-shell">
-        <Sidebar user={user} onLogout={onLogout} onShowHelp={onShowHelp} />
+        <Sidebar
+          user={user}
+          onLogout={onLogout}
+          onShowHelp={onShowHelp}
+          isMobileOpen={mobileMenuOpen}
+          setIsMobileOpen={setMobileMenuOpen}
+        />
         <div className="app-main">
           <header className="header">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <div className="header-subtitle" style={{ textTransform: 'uppercase', letterSpacing: '0.8px', fontSize: 10, fontWeight: 700 }}>
-                {meta.sub}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button
+                className="mobile-only"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Toggle Menu"
+                style={{
+                  background: 'none', border: 'none', color: 'var(--text-primary)',
+                  padding: 8, marginLeft: -8, cursor: 'pointer'
+                }}
+              >
+                {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <div className="header-subtitle desktop-only" style={{ textTransform: 'uppercase', letterSpacing: '0.8px', fontSize: 10, fontWeight: 700 }}>
+                  {meta.sub}
+                </div>
+                <h1 className="header-title" style={{ fontSize: 14, fontWeight: 800, margin: 0 }}>
+                  {meta.title}
+                </h1>
               </div>
-              <h1 className="header-title" style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>
-                {meta.title}
-              </h1>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {/* Ctrl+K hint chip */}
               <span
-                className="shortcut-chip"
+                className="shortcut-chip desktop-only"
                 aria-label="Open Command Palette (Ctrl+K)"
                 role="button"
                 tabIndex={0}
@@ -87,12 +112,12 @@ function AppShell({ user, onLogout, theme, toggleTheme, onShowHelp }) {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {theme === 'dark' ? <Sun size={13} strokeWidth={2.5} aria-hidden="true" /> : <Moon size={13} strokeWidth={2.5} aria-hidden="true" />}
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 700, flex: 1, textAlign: 'left', marginLeft: 2 }}>
+                <span className="desktop-only" style={{ fontSize: 11, fontWeight: 700, flex: 1, textAlign: 'left', marginLeft: 2 }}>
                   {theme === 'dark' ? 'Light' : 'Dark'}
                 </span>
               </button>
 
-              <span className="role-badge">
+              <span className="role-badge desktop-only">
                 {user?.role?.replace('_', ' ')}
               </span>
             </div>

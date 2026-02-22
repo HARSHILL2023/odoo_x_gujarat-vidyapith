@@ -440,15 +440,15 @@ export default function Vehicles() {
     return (
         <div className="fade-in">
             {/* ── Page Actions ────────────────────────────────── */}
-            <div className="page-header" style={{ marginBottom: 20, justifyContent: 'flex-end' }}>
-                <div className="page-sub" style={{ marginRight: 'auto' }}>
+            <div className="page-header">
+                <div className="page-sub">
                     {totalCount} vehicles · {utilizationPct}% utilization
                 </div>
                 <div className="page-actions">
                     {/* Filters */}
                     <select
                         className="form-control"
-                        style={{ width: 120, height: 34, fontSize: 12 }}
+                        style={{ flex: 1, height: 34, fontSize: 12, minWidth: 100 }}
                         value={filterType}
                         onChange={e => setFilterType(e.target.value)}
                     >
@@ -459,7 +459,7 @@ export default function Vehicles() {
                     </select>
                     <select
                         className="form-control"
-                        style={{ width: 140, height: 34, fontSize: 12 }}
+                        style={{ flex: 1, height: 34, fontSize: 12, minWidth: 100 }}
                         value={filterStatus}
                         onChange={e => setFilterStatus(e.target.value)}
                     >
@@ -486,7 +486,7 @@ export default function Vehicles() {
                             </button>
                         ))}
                     </div>
-                    <button className="btn btn-primary" onClick={openAdd} aria-label="Add new vehicle">
+                    <button className="btn btn-primary" onClick={openAdd} aria-label="Add new vehicle" style={{ flex: '1 0 100%', justifyContent: 'center', marginTop: 4 }}>
                         <Plus size={14} aria-hidden="true" /> Add Vehicle
                     </button>
                 </div>
@@ -541,9 +541,9 @@ export default function Vehicles() {
                 <>
                     {/* Grid search */}
                     <div style={{
-                        display: 'flex', gap: 10, alignItems: 'center', marginBottom: 16,
+                        display: 'flex', gap: 10, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap'
                     }}>
-                        <div className="search-wrap" style={{ flex: 1, maxWidth: 320 }}>
+                        <div className="search-wrap" style={{ flex: '1 1 200px' }}>
                             <span className="search-icon"><Search size={14} /></span>
                             <input
                                 className="search-input"
@@ -611,7 +611,7 @@ export default function Vehicles() {
                                 ({filtered.length})
                             </span>
                         </span>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <div className="page-actions" style={{ marginLeft: 'auto' }}>
                             <select
                                 className="form-control"
                                 style={{ width: 150, height: 32, fontSize: 12 }}

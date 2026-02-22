@@ -86,11 +86,36 @@ const CSS = `
     background: var(--bg-sidebar, var(--bg-card));
     border-right: 1px solid var(--glass-border);
     width: var(--sidebar-w, 240px);
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     flex-shrink: 0; user-select: none;
     z-index: 100;
 }
 .ff-sb.ff-sb-collapsed { width: 64px; }
+
+@media (max-width: 768px) {
+    .ff-sb {
+        position: fixed;
+        left: 0; top: 0; bottom: 0;
+        width: 260px;
+        transform: translateX(-100%);
+        box-shadow: 20px 0 50px rgba(0,0,0,0.5);
+    }
+    .ff-sb.ff-sb-mobile-open {
+        transform: translateX(0);
+    }
+}
+
+.ff-sb-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(4px);
+    z-index: 90;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+.ff-sb-overlay.ff-sb-overlay-open {
+    opacity: 1; pointer-events: auto;
+}
 .ff-sb-logo {
     display: flex; align-items: center; gap: 12px;
     padding: 20px 18px 18px;
@@ -307,7 +332,7 @@ function injectStyles() {
 }
 
 /* ─── Main component ──────────────────────────────────────── */
-export default function Sidebar({ user, onLogout, onShowHelp, badges = {} }) {
+export default function Sidebar({ user, onLogout, onShowHelp, badges = {}, isMobileOpen, setIsMobileOpen }) {
     const [collapsed, setCollapsed] = useState(() => {
         try { return localStorage.getItem(COLLAPSE_KEY) === 'true'; }
         catch { return false; }
@@ -391,8 +416,14 @@ export default function Sidebar({ user, onLogout, onShowHelp, badges = {} }) {
 
     return (
         <>
+            {/* Mobile Backdrop */}
+            <div
+                className={`ff-sb-overlay ${isMobileOpen ? 'ff-sb-overlay-open' : ''}`}
+                onClick={() => setIsMobileOpen?.(false)}
+            />
+
             <aside
-                className={`ff-sb ${collapsed ? 'ff-sb-collapsed' : ''}`}
+                className={`ff-sb ${collapsed ? 'ff-sb-collapsed' : ''} ${isMobileOpen ? 'ff-sb-mobile-open' : ''}`}
                 aria-label="Sidebar navigation"
             >
                 {/* ── Logo ──────────────────────────────────── */}

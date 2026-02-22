@@ -303,7 +303,7 @@ export default function Help({ user }) {
             <div style={{
                 background: `linear-gradient(135deg, ${displayRole.color}18 0%, transparent 65%)`,
                 border: `1px solid ${displayRole.color}35`,
-                borderRadius: 18, padding: '28px 32px', marginBottom: 28,
+                borderRadius: 18, padding: '24px', marginBottom: 28,
                 position: 'relative', overflow: 'hidden',
                 transition: 'all 0.35s ease',
             }}>
@@ -755,6 +755,7 @@ export default function Help({ user }) {
                     border: `1px solid ${roleInfo.color}30`,
                     borderRadius: 14, padding: '20px 24px',
                     display: 'flex', alignItems: 'center', gap: 18,
+                    flexWrap: 'wrap'
                 }}
             >
                 <div style={{
@@ -784,7 +785,7 @@ export default function Help({ user }) {
                 </div>
                 <button
                     className="btn btn-secondary btn-sm"
-                    style={{ flexShrink: 0 }}
+                    style={{ flexShrink: 0, width: '100%', justifyContent: 'center' }}
                     onClick={() => navigate('/dashboard')}
                 >
                     Go to Dashboard

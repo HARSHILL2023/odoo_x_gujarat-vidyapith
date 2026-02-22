@@ -138,9 +138,14 @@ function PasswordInput({ value, onChange, placeholder, autoComplete, id, autoFoc
 
 /* ── Field ─────────────────────────────────────────────────── */
 function Field({ label, children, hint }) {
+    // Safely extract ID for htmlFor, handling both single child and array of children
+    const childArray = Array.isArray(children) ? children : [children];
+    const targetChild = childArray.find(c => c && typeof c === 'object' && c.props && c.props.id);
+    const id = targetChild?.props?.id;
+
     return (
         <div className="form-group">
-            <label className="form-label" htmlFor={children.props.id}
+            <label className="form-label" htmlFor={id}
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <span>{label}</span>
                 {hint && (

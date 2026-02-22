@@ -307,13 +307,15 @@ export default function FuelLogs() {
         <div className="fade-in">
 
             {/* ── Page Actions ────────────────────────────────── */}
-            <div className="page-header" style={{ marginBottom: 20, justifyContent: 'flex-end' }}>
-                <div className="page-sub" style={{ marginRight: 'auto' }}>
+            <div className="page-header">
+                <div className="page-sub">
                     Operational cost tracking
                 </div>
-                <button className="btn btn-primary" onClick={openModal}>
-                    <Plus size={14} /> Add Entry
-                </button>
+                <div className="page-actions">
+                    <button className="btn btn-primary" onClick={openModal} style={{ flex: '1 0 100%', justifyContent: 'center' }}>
+                        <Plus size={14} /> Add Entry
+                    </button>
+                </div>
             </div>
 
             {/* ── KPI Cards ───────────────────────────────── */}
@@ -410,14 +412,14 @@ export default function FuelLogs() {
                     </span>
 
                     {/* Search with clear button */}
-                    <div className="search-wrap" style={{ position: 'relative' }}>
+                    <div className="search-wrap" style={{ position: 'relative', flex: '1 1 200px' }}>
                         <span className="search-icon"><Search size={14} /></span>
                         <input
                             className="search-input"
-                            placeholder="Search vehicle, trip, date…"
+                            placeholder="Search..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            style={{ paddingRight: search ? 28 : undefined }}
+                            style={{ paddingRight: search ? 28 : undefined, width: '100%' }}
                         />
                         {search && (
                             <button

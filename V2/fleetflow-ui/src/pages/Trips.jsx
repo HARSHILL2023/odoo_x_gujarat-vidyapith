@@ -549,7 +549,7 @@ export default function Trips() {
         <div className="fade-in">
 
             {/* ── Page Actions ────────────────────────────────── */}
-            <div className="page-header" style={{ marginBottom: 20, justifyContent: 'flex-end' }}>
+            <div className="page-header">
                 <div className="page-actions">
                     {/* View toggle */}
                     <div className="ff-view-toggle">
@@ -562,12 +562,12 @@ export default function Trips() {
                                 aria-pressed={view === key}
                             >
                                 <Icon size={14} aria-hidden="true" />
-                                {label}
+                                <span className="desktop-only">{label}</span>
                             </button>
                         ))}
                     </div>
-                    <button className="btn btn-primary" onClick={openModal}>
-                        <Plus size={14} /> New Trip
+                    <button className="btn btn-primary" onClick={openModal} style={{ flex: 1, justifyContent: 'center' }}>
+                        <Plus size={14} /> <span className="desktop-only">New Trip</span><span className="mobile-only">New</span>
                     </button>
                 </div>
             </div>
@@ -735,29 +735,29 @@ export default function Trips() {
                                 ({filtered.length})
                             </span>
                         </span>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <div className="page-actions" style={{ marginLeft: 'auto', width: 'auto' }}>
                             {/* State filter */}
                             <select
                                 className="form-control"
-                                style={{ width: 140, height: 32, fontSize: 12 }}
+                                style={{ flex: 1, height: 32, fontSize: 12, minWidth: 100 }}
                                 value={filterState}
                                 onChange={e => setFilterState(e.target.value)}
                             >
-                                <option value="all">All States</option>
+                                <option value="all">States</option>
                                 {COLUMNS.map(c => (
                                     <option key={c.key} value={c.key}>{c.label}</option>
                                 ))}
                             </select>
 
                             {/* Search */}
-                            <div className="search-wrap" style={{ position: 'relative' }}>
+                            <div className="search-wrap" style={{ position: 'relative', flex: '1 1 120px' }}>
                                 <span className="search-icon"><Search size={14} /></span>
                                 <input
                                     className="search-input"
-                                    placeholder="Search trips, driver, vehicle…"
+                                    placeholder="Search..."
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
-                                    style={{ paddingRight: search ? 28 : undefined }}
+                                    style={{ paddingRight: search ? 28 : undefined, width: '100%' }}
                                 />
                                 {search && (
                                     <button

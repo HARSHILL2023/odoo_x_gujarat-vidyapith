@@ -69,7 +69,7 @@ function StateLine({ state }) {
     const current = STATE_ORDER[state] ?? 0;
     const label = (state || 'scheduled').replace('_', ' ');
     return (
-        <div style={{ display: 'flex', alignItems: 'center', minWidth: 160 }} aria-label={`Service status: ${label}`}>
+        <div style={{ display: 'flex', alignItems: 'center', minWidth: 120, flex: 1 }} aria-label={`Service status: ${label}`}>
             {steps.map((s, i) => {
                 const done = i < current;
                 const active = i === current;
@@ -345,15 +345,16 @@ export default function Maintenance() {
         <div className="fade-in">
 
             {/* ── Page Actions ────────────────────────────────── */}
-            <div className="page-header" style={{ marginBottom: 20, justifyContent: 'flex-end' }}>
-                <div className="page-sub" style={{ marginRight: 'auto' }}>
+            <div className="page-header">
+                <div className="page-sub">
                     {scheduledCount + inProgressCount} open
                     {' · '}₹{totalCost.toLocaleString()} total
-                    {' · '}~₹{avgCost.toLocaleString()} avg/record
                 </div>
-                <button className="btn btn-primary" onClick={openModal}>
-                    <Plus size={14} /> Log Service
-                </button>
+                <div className="page-actions">
+                    <button className="btn btn-primary" onClick={openModal} style={{ flex: '1 0 100%', justifyContent: 'center' }}>
+                        <Plus size={14} /> Log Service
+                    </button>
+                </div>
             </div>
 
             {/* ── KPI Cards ───────────────────────────────── */}
@@ -462,11 +463,11 @@ export default function Maintenance() {
                         {/* State filter */}
                         <select
                             className="form-control"
-                            style={{ width: 130, height: 32, fontSize: 12 }}
+                            style={{ flex: 1, height: 32, fontSize: 12, minWidth: 100 }}
                             value={filterState}
                             onChange={e => setFilterState(e.target.value)}
                         >
-                            <option value="all">All States</option>
+                            <option value="all">States</option>
                             <option value="scheduled">Scheduled</option>
                             <option value="in_progress">In Progress</option>
                             <option value="done">Done</option>
@@ -475,25 +476,25 @@ export default function Maintenance() {
                         {/* Type filter */}
                         <select
                             className="form-control"
-                            style={{ width: 145, height: 32, fontSize: 12 }}
+                            style={{ flex: 1, height: 32, fontSize: 12, minWidth: 100 }}
                             value={filterType}
                             onChange={e => setFilterType(e.target.value)}
                         >
-                            <option value="all">All Types</option>
+                            <option value="all">Types</option>
                             {SERVICE_TYPES.map(t => (
                                 <option key={t.v} value={t.v}>{t.l}</option>
                             ))}
                         </select>
 
                         {/* Search with clear button */}
-                        <div className="search-wrap" style={{ position: 'relative' }}>
+                        <div className="search-wrap" style={{ position: 'relative', flex: '1 1 150px' }}>
                             <span className="search-icon"><Search size={14} /></span>
                             <input
                                 className="search-input"
                                 placeholder="Search records…"
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
-                                style={{ paddingRight: search ? 28 : undefined }}
+                                style={{ paddingRight: search ? 28 : undefined, width: '100%' }}
                             />
                             {search && (
                                 <button

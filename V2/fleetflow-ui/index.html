@@ -1,13 +1,176 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>fleetflow-ui</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="FleetFlow is a modern fleet management dashboard for tracking vehicles, drivers, trips, and maintenance with real-time analytics." />
+  <meta name="keywords" content="fleet management, logistics, vehicle tracking, maintenance logs, fleet analytics" />
+  <meta name="theme-color" content="#0f1115" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/vite.svg" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!-- High-priority font preload (Space Grotesk & Inter) -->
+  <link rel="preload" as="style"
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;800&family=Inter:wght@400;600&display=swap" />
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;800&family=Inter:wght@400;600&display=swap" />
+
+  <!-- Low-priority font weights -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Inter:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet" media="print" onload="this.media='all'">
+
+  <!-- Inline critical App Shell CSS (Fixed LCP + Speed Index) -->
+  <style>
+    :root {
+      background: #080d17;
+      --bg-base: #080c12;
+      --bg-surface: #0e1420;
+      --bg-card: #121926;
+      --text-primary: #e8eef6;
+      --text-muted: #5c708a;
+      --font-heading: 'Space Grotesk', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --sidebar-w: 240px;
+      --accent: #3b82f6;
+    }
+
+    [data-theme='light'] {
+      background: #f0f4f8;
+      --bg-base: #f0f4fa;
+      --bg-surface: #ffffff;
+      --bg-card: #ffffff;
+      --text-primary: #0c1523;
+    }
+
+    body {
+      margin: 0;
+      background: inherit;
+      font-family: var(--font-body);
+      color: var(--text-primary);
+      overflow-x: hidden;
+    }
+
+    .app-shell {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    /* Sidebar Skeleton */
+    .ff-sb-s {
+      width: 240px;
+      background: var(--bg-card);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .ff-sb-l {
+      padding: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .ff-sb-m {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    }
+
+    .app-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .header {
+      height: 64px;
+      background: var(--bg-card);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      padding: 0 32px;
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-family: var(--font-heading);
+      font-size: 16px;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .header-sub {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+  </style>
+
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <title>FleetFlow · Modern Fleet Management</title>
+</head>
+
+<body>
+  <div id="root">
+    <!-- Static App Shell (Vanishes on React Hydration) -->
+    <div class="app-shell" id="app-shell-skeleton">
+      <aside class="ff-sb-s">
+        <div class="ff-sb-l">
+          <div class="ff-sb-m"></div>
+          <div style="font-family: 'Space Grotesk'; font-weight: 800; font-size: 15px; color: #3b82f6">FleetFlow</div>
+        </div>
+        <div style="flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 20px">
+          <div style="height: 12px; width: 60%; background: rgba(255,255,255,0.05); border-radius: 4px"></div>
+          <div style="height: 32px; width: 100%; background: rgba(255,255,255,0.03); border-radius: 8px"></div>
+          <div style="height: 32px; width: 100%; background: rgba(255,255,255,0.03); border-radius: 8px"></div>
+          <div style="height: 32px; width: 100%; background: rgba(255,255,255,0.03); border-radius: 8px"></div>
+        </div>
+      </aside>
+      <div class="app-main">
+        <header class="header">
+          <div style="display: flex; flex-direction: column">
+            <div class="header-sub">Real-time fleet overview</div>
+            <h1 class="header-title">Command Center</h1>
+          </div>
+        </header>
+        <div style="flex: 1; padding: 32px; background: var(--bg-base)">
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px">
+            <div
+              style="height: 120px; background: var(--bg-card); border-radius: 14px; border: 1px solid rgba(255,255,255,0.08)">
+            </div>
+            <div
+              style="height: 120px; background: var(--bg-card); border-radius: 14px; border: 1px solid rgba(255,255,255,0.08)">
+            </div>
+            <div
+              style="height: 120px; background: var(--bg-card); border-radius: 14px; border: 1px solid rgba(255,255,255,0.08)">
+            </div>
+            <div
+              style="height: 120px; background: var(--bg-card); border-radius: 14px; border: 1px solid rgba(255,255,255,0.08)">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
 </html>

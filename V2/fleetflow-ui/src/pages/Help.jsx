@@ -1,55 +1,63 @@
-import { useState, useMemo } from 'react';
-import AnimatedList from '../components/AnimatedList';
-import { useFleet } from '../context/FleetContext';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AnimatedList from '../components/AnimatedList';
+import {
+    Shield, Package, Search, BarChart3,
+    Zap, Truck, User, Map, Wrench, Fuel,
+    Lightbulb, AlertTriangle, Info, Moon,
+    ArrowRight, Check, HelpCircle, MessageSquare,
+    ChevronDown, X, Star, FileText, Plus
+} from 'lucide-react';
 
-/* ─── Data ────────────────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════════
+   STATIC DATA
+   ════════════════════════════════════════════════════════════ */
 const ROLE_CONTENT = {
-    fleet_manager:    { color: '#238bfa', emoji: '🛡️', title: 'Fleet Manager',    tagline: 'Full control — vehicles, drivers, trips, maintenance & analytics.' },
-    dispatcher:       { color: '#16a34a', emoji: '📦', title: 'Dispatcher',        tagline: 'Create & dispatch trips, assign drivers, log fuel costs.' },
-    safety_officer:   { color: '#d97706', emoji: '🔍', title: 'Safety Officer',    tagline: 'Monitor driver compliance, license expiry & safety scores.' },
-    financial_analyst:{ color: '#9333ea', emoji: '📊', title: 'Financial Analyst', tagline: 'Analyze costs, ROI, fuel spend and export reports.' },
+    fleet_manager: { color: '#238bfa', Icon: Shield, title: 'Fleet Manager', tagline: 'Full control — vehicles, drivers, trips, maintenance & analytics.' },
+    dispatcher: { color: '#16a34a', Icon: Package, title: 'Dispatcher', tagline: 'Create & dispatch trips, assign drivers, log fuel costs.' },
+    safety_officer: { color: '#d97706', Icon: Search, title: 'Safety Officer', tagline: 'Monitor driver compliance, license expiry & safety scores.' },
+    financial_analyst: { color: '#9333ea', Icon: BarChart3, title: 'Financial Analyst', tagline: 'Analyze costs, ROI, fuel spend and export reports.' },
 };
 
 const FEATURES = [
     {
-        icon: '⚡', name: 'Command Center', path: '/dashboard',
+        Icon: Zap, name: 'Command Center', path: '/dashboard',
         desc: 'Your real-time mission control. See fleet utilization, active trips, upcoming maintenance and total fuel spend at a glance.',
         tips: ['Cards update as you add data across the app.', 'Utilization = On Trip vehicles ÷ total active vehicles.'],
         roles: ['fleet_manager', 'dispatcher', 'safety_officer', 'financial_analyst'],
     },
     {
-        icon: '🚛', name: 'Vehicles', path: '/vehicles',
+        Icon: Truck, name: 'Vehicles', path: '/vehicles',
         desc: 'Full CRUD for your fleet assets. Filter by type (truck / van / bike), region and status. Retiring a vehicle soft-deletes it.',
         tips: ['Status auto-changes to "On Trip" or "In Shop" — you cannot override this manually.', 'Filter pills stack — combine type + region.'],
         roles: ['fleet_manager'],
     },
     {
-        icon: '👤', name: 'Drivers', path: '/drivers',
+        Icon: User, name: 'Drivers', path: '/drivers',
         desc: 'Driver profiles with license tracking. Drivers with expired or near-expired licenses are flagged with a warning badge.',
         tips: ['Suspended drivers cannot be assigned to trips.', 'Safety scores are set manually during driver registration.'],
         roles: ['fleet_manager', 'safety_officer'],
     },
     {
-        icon: '🗺️', name: 'Trips', path: '/trips',
+        Icon: Map, name: 'Trips', path: '/trips',
         desc: 'Kanban-style board: Draft → Dispatched → Completed / Cancelled. Business rules are enforced server-side.',
         tips: ['Dispatch locks both the vehicle AND the driver until the trip ends.', 'Cargo weight is validated against vehicle max capacity.'],
         roles: ['fleet_manager', 'dispatcher'],
     },
     {
-        icon: '🔧', name: 'Maintenance', path: '/maintenance',
+        Icon: Wrench, name: 'Maintenance', path: '/maintenance',
         desc: 'Log service records. When a new maintenance entry is created, the vehicle is automatically set to "In Shop".',
         tips: ['Completing maintenance reverts the vehicle to Available or On Trip.', 'Use Scheduled status to plan future services.'],
         roles: ['fleet_manager', 'safety_officer'],
     },
     {
-        icon: '⛽', name: 'Fuel & Expenses', path: '/fuel',
+        Icon: Fuel, name: 'Fuel & Expenses', path: '/fuel',
         desc: 'Per-vehicle fuel tracking. Cost per litre is calculated automatically from total cost ÷ litres filled.',
         tips: ['Optionally link a fuel log to a specific trip for per-trip cost breakdowns.', 'Bulk fuel data feeds into Analytics efficiency charts.'],
         roles: ['fleet_manager', 'dispatcher', 'financial_analyst'],
     },
     {
-        icon: '📊', name: 'Analytics', path: '/analytics',
+        Icon: BarChart3, name: 'Analytics', path: '/analytics',
         desc: 'Aggregated insights: fleet efficiency (km/L), ROI per vehicle, driver performance scores, and cost breakdowns.',
         tips: ['Use the Export buttons to download CSV reports.', 'Driver performance is ranked by trips completed × safety score.'],
         roles: ['fleet_manager', 'financial_analyst'],
@@ -57,13 +65,13 @@ const FEATURES = [
 ];
 
 const NOTIFICATIONS = [
-    { icon: '💡', color: '#238bfa', name: 'Trip Dispatch',      time: 'auto',     desc: "Dispatching a trip locks the vehicle & driver — they're unavailable until the trip ends." },
-    { icon: '⚠️', color: '#d97706', name: 'License Check',      time: 'enforced', desc: 'Drivers with expired or suspended status are blocked from all trip assignments.' },
-    { icon: '🔧', color: '#16a34a', name: 'Auto In Shop',       time: 'instant',  desc: 'Adding a maintenance record immediately moves the vehicle to "In Shop" status.' },
-    { icon: '📊', color: '#9333ea', name: 'CSV Export',         time: 'anytime',  desc: 'Download fuel, maintenance or trip data as CSV from the Analytics page.' },
-    { icon: '📦', color: '#f43f5e', name: 'Cargo Validation',   time: 'server',   desc: "Trips exceeding the vehicle's max capacity are rejected by the server." },
-    { icon: '🔍', color: '#0ea5e9', name: 'Status Filters',     time: 'tip',      desc: 'Use filter pills on Vehicles and Drivers pages to narrow results by status or type.' },
-    { icon: '🌗', color: '#64748b', name: 'Theme Toggle',       time: 'sidebar',  desc: 'Switch between dark and light mode anytime using the button at the top of the sidebar.' },
+    { Icon: Lightbulb, color: '#238bfa', name: 'Trip Dispatch', time: 'auto', desc: "Dispatching a trip locks the vehicle & driver — they're unavailable until the trip ends." },
+    { Icon: AlertTriangle, color: '#d97706', name: 'License Check', time: 'enforced', desc: 'Drivers with expired or suspended status are blocked from all trip assignments.' },
+    { Icon: Wrench, color: '#16a34a', name: 'Auto In Shop', time: 'instant', desc: 'Adding a maintenance record immediately moves the vehicle to "In Shop" status.' },
+    { Icon: BarChart3, color: '#9333ea', name: 'CSV Export', time: 'anytime', desc: 'Download fuel, maintenance or trip data as CSV from the Analytics page.' },
+    { Icon: Package, color: '#f43f5e', name: 'Cargo Validation', time: 'server', desc: "Trips exceeding the vehicle's max capacity are rejected by the server." },
+    { Icon: Search, color: '#0ea5e9', name: 'Status Filters', time: 'tip', desc: 'Use filter pills on Vehicles and Drivers pages to narrow results by status or type.' },
+    { Icon: Moon, color: '#64748b', name: 'Theme Toggle', time: 'sidebar', desc: 'Switch between dark and light mode anytime using the button at the top of the sidebar.' },
 ];
 
 const FAQS = [
@@ -105,71 +113,84 @@ const FAQS = [
 ];
 
 const CHECKLIST = [
-    { id: 'vehicle', icon: '🚛', label: 'Add your first vehicle' },
-    { id: 'driver',  icon: '👤', label: 'Register a driver' },
-    { id: 'trip',    icon: '🗺️', label: 'Create & dispatch a trip' },
-    { id: 'fuel',    icon: '⛽', label: 'Log a fuel entry' },
-    { id: 'maint',   icon: '🔧', label: 'Add a maintenance record' },
-    { id: 'analytics', icon: '📊', label: 'Review Analytics & Reports' },
+    { id: 'vehicle', Icon: Truck, label: 'Add your first vehicle' },
+    { id: 'driver', Icon: User, label: 'Register a driver' },
+    { id: 'trip', Icon: Map, label: 'Create & dispatch a trip' },
+    { id: 'fuel', Icon: Fuel, label: 'Log a fuel entry' },
+    { id: 'maint', Icon: Wrench, label: 'Add a maintenance record' },
+    { id: 'analytics', Icon: BarChart3, label: 'Review Analytics & Reports' },
 ];
 
-/* ─── Sub-components ──────────────────────────────────────── */
-function NotifCard({ icon, color, name, time, desc }) {
+const TAG_COLORS = {
+    trips: '#3b82f6',
+    vehicles: '#22c55e',
+    drivers: '#f59e0b',
+    analytics: '#a855f7',
+    account: '#64748b',
+    fuel: '#0ea5e9',
+};
+
+const QUICK_LINKS = [
+    { href: '#tips', Icon: Zap, label: 'Tips' },
+    { href: '#checklist', Icon: Check, label: 'Checklist' },
+    { href: '#features', Icon: Map, label: 'Features' },
+    { href: '#faq', Icon: HelpCircle, label: 'FAQ' },
+    { href: '#support', Icon: MessageSquare, label: 'Support' },
+];
+
+/* ════════════════════════════════════════════════════════════
+   SUB-COMPONENTS
+   ════════════════════════════════════════════════════════════ */
+
+/* ── NotifCard ─────────────────────────────────────────────── */
+function NotifCard({ Icon, color, name, time, desc }) {
     return (
-        <figure style={{
-            display: 'flex', alignItems: 'center', gap: 14, margin: 0,
-            background: 'rgba(255,255,255,0.03)',
-            backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-            border: `1px solid ${color}30`,
-            borderLeft: `3px solid ${color}`,
-            borderRadius: 14, padding: '13px 16px',
-            boxShadow: `0 4px 16px rgba(0,0,0,0.12), inset 0 0 0 1px ${color}08`,
-            cursor: 'default', transition: 'box-shadow 0.25s ease, transform 0.25s ease',
-        }}
-            onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateY(-2px) scale(1.015)';
-                e.currentTarget.style.boxShadow = `0 8px 28px rgba(0,0,0,0.2), 0 0 0 1px ${color}40`;
-            }}
-            onMouseLeave={e => {
-                e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.12), inset 0 0 0 1px ${color}08`;
-            }}
+        <figure
+            className="ff-help-card"
+            area-label={`Tip: ${name}. ${desc}`}
+            style={{ borderLeftColor: color }}
         >
             <div style={{ position: 'relative', flexShrink: 0 }}>
                 <div style={{
                     position: 'absolute', inset: -4, borderRadius: 14,
                     background: color, opacity: 0.15, filter: 'blur(8px)', pointerEvents: 'none',
-                }} />
+                }} aria-hidden="true" />
                 <div style={{
                     width: 42, height: 42, borderRadius: 12,
-                    background: `linear-gradient(135deg, ${color}dd, ${color}88)`,
+                    background: `linear-gradient(135deg, ${color}, ${color}aa)`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 19, position: 'relative',
-                    boxShadow: `0 2px 8px ${color}50`,
+                    position: 'relative', boxShadow: `0 4px 12px ${color}40`,
                 }}>
-                    {icon}
+                    <Icon size={19} color="#fff" strokeWidth={2.5} aria-hidden="true" />
                 </div>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{name}</span>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>
+                        {name}
+                    </span>
                     <span style={{
-                        fontSize: 9, fontWeight: 600, color,
+                        fontSize: 9, fontWeight: 700, color,
                         letterSpacing: '0.08em',
-                        background: `${color}18`,
+                        background: `${color}15`,
                         border: `1px solid ${color}30`,
-                        padding: '1px 6px', borderRadius: 99,
+                        padding: '1px 7px', borderRadius: 99,
                         textTransform: 'uppercase',
                     }}>
                         {time}
                     </span>
                 </div>
-                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{desc}</p>
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    {desc}
+                </p>
             </div>
         </figure>
     );
 }
 
+/* ── SectionHeader ─────────────────────────────────────────── */
+/* FIX: was rendered with id on both <section> and <h2> → duplicate IDs.
+   Now only the h2 gets the id (scroll anchor target). Remove id from <section>. */
 function SectionHeader({ id, title }) {
     return (
         <h2 id={id} style={{
@@ -184,39 +205,47 @@ function SectionHeader({ id, title }) {
     );
 }
 
+/* ── TagPill ───────────────────────────────────────────────── */
 function TagPill({ tag }) {
-    const TAG_COLORS = {
-        trips:     '#3b82f6', vehicles: '#22c55e', drivers: '#f59e0b',
-        analytics: '#a855f7', account:  '#64748b', fuel:    '#0ea5e9',
-    };
     const color = TAG_COLORS[tag] ?? '#64748b';
     return (
         <span style={{
             fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
             letterSpacing: '0.07em', padding: '2px 7px', borderRadius: 99,
             background: `${color}18`, color, border: `1px solid ${color}30`,
+            flexShrink: 0,
         }}>
             {tag}
         </span>
     );
 }
 
-/* ─── Main Component ──────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════════
+   MAIN COMPONENT
+   ════════════════════════════════════════════════════════════ */
 export default function Help({ user }) {
-    const roleInfo = ROLE_CONTENT[user?.role] ?? ROLE_CONTENT.dispatcher;
     const navigate = useNavigate();
-    const [openFaq, setOpenFaq]           = useState(null);
+    /* useFleet only needed if you derive live data; keep for future use */
+    // const { vehicles, drivers } = useFleet();
+
+    const roleInfo = ROLE_CONTENT[user?.role] ?? ROLE_CONTENT.dispatcher;
+
+    const [openFaq, setOpenFaq] = useState(null);
     const [activeFeature, setActiveFeature] = useState(null);
-    const [search, setSearch]             = useState('');
-    const [previewRole, setPreviewRole]   = useState(null);
-    const [checked, setChecked]           = useState(() => {
+    const [search, setSearch] = useState('');
+    const [previewRole, setPreviewRole] = useState(null);
+    const [checked, setChecked] = useState(() => {
         try { return JSON.parse(localStorage.getItem('ff-checklist') || '[]'); }
         catch { return []; }
     });
 
-    const displayRole = ROLE_CONTENT[previewRole] ?? roleInfo;
+    /* FIX: derive displayRole inside render — memoised so it doesn't re-calc every render */
+    const displayRole = useMemo(
+        () => ROLE_CONTENT[previewRole] ?? roleInfo,
+        [previewRole, roleInfo]
+    );
 
-    /* ── Search filtering ─────────────────────────────────── */
+    /* ── Search filters ─────────────────────────────────────── */
     const filteredFeatures = useMemo(() => {
         if (!search) return FEATURES;
         const q = search.toLowerCase();
@@ -237,20 +266,40 @@ export default function Help({ user }) {
         );
     }, [search]);
 
-    /* ── Checklist toggle ─────────────────────────────────── */
-    const toggleCheck = id => {
-        const next = checked.includes(id)
-            ? checked.filter(c => c !== id)
-            : [...checked, id];
-        setChecked(next);
-        localStorage.setItem('ff-checklist', JSON.stringify(next));
-    };
+    /* ── Checklist ──────────────────────────────────────────── */
+    /* FIX: use functional setChecked — avoids stale closure */
+    const toggleCheck = useCallback((id) => {
+        setChecked(prev => {
+            const next = prev.includes(id)
+                ? prev.filter(c => c !== id)
+                : [...prev, id];
+            localStorage.setItem('ff-checklist', JSON.stringify(next));
+            return next;
+        });
+    }, []);
+
     const checkPct = Math.round((checked.length / CHECKLIST.length) * 100);
 
+    /* ── Accordion togglers ─────────────────────────────────── */
+    const toggleFaq = useCallback((i) => {
+        setOpenFaq(prev => (prev === i ? null : i));
+    }, []);
+
+    const toggleFeature = useCallback((i) => {
+        setActiveFeature(prev => (prev === i ? null : i));
+    }, []);
+
+    const togglePreviewRole = useCallback((key) => {
+        setPreviewRole(prev => (prev === key ? null : key));
+    }, []);
+
+    /* ════════════════════════════════════════════════════════
+       RENDER
+       ════════════════════════════════════════════════════════ */
     return (
         <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 4px 48px' }} className="fade-in">
 
-            {/* ── Hero banner ───────────────────────────────── */}
+            {/* ── Hero banner ─────────────────────────────── */}
             <div style={{
                 background: `linear-gradient(135deg, ${displayRole.color}18 0%, transparent 65%)`,
                 border: `1px solid ${displayRole.color}35`,
@@ -265,67 +314,56 @@ export default function Help({ user }) {
                     background: displayRole.color, opacity: 0.07,
                     filter: 'blur(40px)', pointerEvents: 'none',
                 }} />
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, position: 'relative' }}>
-                    <div style={{ fontSize: 52, lineHeight: 1, flexShrink: 0 }}>{displayRole.emoji}</div>
+                <div style={{
+                    display: 'flex', alignItems: 'flex-start',
+                    gap: 20, position: 'relative',
+                }}>
+                    <div style={{ flexShrink: 0 }}>
+                        <displayRole.Icon size={42} strokeWidth={2.5} color={displayRole.color} />
+                    </div>
                     <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 21, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 5, fontFamily: 'var(--font-heading)' }}>
-                            Help &amp; Resource Centre
-                        </div>
-                        <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
+                        <div style={{
+                            fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12,
+                        }}>
                             Logged in as{' '}
                             <strong style={{ color: displayRole.color }}>{displayRole.title}</strong>
                             {' '}— {displayRole.tagline}
                         </div>
+
                         {/* Role preview pills */}
                         <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-                            {Object.entries(ROLE_CONTENT).map(([key, r]) => (
-                                <button
-                                    key={key}
-                                    onClick={() => setPreviewRole(previewRole === key ? null : key)}
-                                    style={{
-                                        fontSize: 11, fontWeight: 600,
-                                        padding: '4px 12px', borderRadius: 999,
-                                        background: previewRole === key || (!previewRole && key === user?.role)
-                                            ? `${r.color}25` : 'rgba(255,255,255,0.04)',
-                                        color: previewRole === key || (!previewRole && key === user?.role)
-                                            ? r.color : 'var(--text-muted)',
-                                        border: `1px solid ${previewRole === key || (!previewRole && key === user?.role)
-                                            ? r.color + '50' : 'var(--glass-border)'}`,
-                                        cursor: 'pointer', transition: 'all 0.2s',
-                                    }}
-                                >
-                                    {r.emoji} {r.title}
-                                </button>
-                            ))}
+                            {Object.entries(ROLE_CONTENT).map(([key, r]) => {
+                                const isActive = previewRole === key
+                                    || (!previewRole && key === user?.role);
+                                return (
+                                    <button
+                                        key={key}
+                                        onClick={() => togglePreviewRole(key)}
+                                        aria-pressed={isActive}
+                                        aria-label={`Preview role: ${r.title}`}
+                                        style={{
+                                            fontSize: 11, fontWeight: 600,
+                                            padding: '4px 12px', borderRadius: 999,
+                                            background: isActive ? `${r.color}20` : 'var(--bg-input)',
+                                            color: isActive ? r.color : 'var(--text-muted)',
+                                            border: `1px solid ${isActive ? r.color + '50' : 'var(--border)'}`,
+                                            cursor: 'pointer', transition: 'all 0.2s',
+                                        }}
+                                    >
+                                        <r.Icon size={14} style={{ marginRight: 6 }} aria-hidden="true" /> {r.title}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* ── Search bar ────────────────────────────────── */}
-            <div style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid var(--glass-border)',
-                borderRadius: 12, padding: '10px 16px', marginBottom: 28,
-                transition: 'border-color 0.2s, box-shadow 0.2s',
-            }}
-                onFocus={e => {
-                    e.currentTarget.style.borderColor = roleInfo.color;
-                    e.currentTarget.style.boxShadow = `0 0 0 3px ${roleInfo.color}18`;
-                }}
-                onBlur={e => {
-                    e.currentTarget.style.borderColor = 'var(--glass-border)';
-                    e.currentTarget.style.boxShadow = 'none';
-                }}
-            >
-                <span style={{ fontSize: 16, flexShrink: 0 }}>🔍</span>
+            {/* ── Search bar ──────────────────────────────── */}
+            <div className="help-search-box">
+                <Search size={16} style={{ flexShrink: 0, color: 'var(--text-muted)' }} />
                 <input
-                    style={{
-                        flex: 1, background: 'none', border: 'none', outline: 'none',
-                        fontSize: 14, color: 'var(--text-primary)',
-                        fontFamily: 'var(--font-body)',
-                    }}
+                    className="help-search-input"
                     placeholder="Search features, tips, FAQs…"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
@@ -335,39 +373,27 @@ export default function Help({ user }) {
                         onClick={() => setSearch('')}
                         style={{
                             background: 'none', border: 'none', cursor: 'pointer',
-                            color: 'var(--text-muted)', fontSize: 16, lineHeight: 1, padding: 0,
+                            color: 'var(--text-muted)', fontSize: 16,
+                            lineHeight: 1, padding: '0 2px',
+                            transition: 'color 0.15s',
                         }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                        title="Clear search"
                     >
-                        ×
+                        <X size={16} />
                     </button>
                 )}
             </div>
 
-            {/* ── Quick Jump nav ────────────────────────────── */}
+            {/* ── Quick Jump nav ───────────────────────────── */}
             {!search && (
-                <div style={{
-                    display: 'flex', gap: 8, flexWrap: 'wrap',
-                    marginBottom: 32,
-                }}>
-                    {[
-                        { href: '#tips',      label: '⚡ Tips'     },
-                        { href: '#checklist', label: '✅ Checklist' },
-                        { href: '#features',  label: '🗺 Features'  },
-                        { href: '#faq',       label: '❓ FAQ'       },
-                        { href: '#support',   label: '💬 Support'   },
-                    ].map(({ href, label }) => (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 32 }}>
+                    {QUICK_LINKS.map(({ href, label, Icon: QuickIcon }) => (
                         <a
                             key={href}
                             href={href}
-                            style={{
-                                fontSize: 12, fontWeight: 600,
-                                padding: '5px 14px', borderRadius: 999,
-                                background: 'rgba(255,255,255,0.04)',
-                                border: '1px solid var(--glass-border)',
-                                color: 'var(--text-secondary)',
-                                textDecoration: 'none',
-                                transition: 'all 0.2s',
-                            }}
+                            className="help-nav-link"
                             onMouseEnter={e => {
                                 e.currentTarget.style.color = roleInfo.color;
                                 e.currentTarget.style.borderColor = `${roleInfo.color}50`;
@@ -375,30 +401,33 @@ export default function Help({ user }) {
                             }}
                             onMouseLeave={e => {
                                 e.currentTarget.style.color = 'var(--text-secondary)';
-                                e.currentTarget.style.borderColor = 'var(--glass-border)';
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                                e.currentTarget.style.borderColor = 'var(--border)';
+                                e.currentTarget.style.background = 'var(--bg-input)';
                             }}
                         >
-                            {label}
+                            <QuickIcon size={14} strokeWidth={2.5} /> {label}
                         </a>
                     ))}
                 </div>
             )}
 
-            {/* ── Live Tips ─────────────────────────────────── */}
+            {/* ── Live Tips ───────────────────────────────── */}
             {!search && (
-                <section style={{ marginBottom: 40 }} id="tips">
-                    <SectionHeader id="tips" title="⚡ Quick Tips" />
+                /* FIX: remove id from section — only SectionHeader h2 carries the anchor id */
+                <section style={{ marginBottom: 40 }}>
+                    <SectionHeader id="tips" title={<span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Zap size={16} /> Quick Tips</span>} />
                     <AnimatedList delay={1800} loop visible={4}>
-                        {NOTIFICATIONS.map((n, i) => <NotifCard key={i} {...n} />)}
+                        {NOTIFICATIONS.map((n) => (
+                            <NotifCard key={n.name} {...n} />
+                        ))}
                     </AnimatedList>
                 </section>
             )}
 
-            {/* ── Getting Started Checklist ─────────────────── */}
+            {/* ── Getting Started Checklist ────────────────── */}
             {!search && (
-                <section style={{ marginBottom: 40 }} id="checklist">
-                    <SectionHeader id="checklist" title="✅ Getting Started" />
+                <section style={{ marginBottom: 40 }}>
+                    <SectionHeader id="checklist" title={<span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Check size={16} /> Getting Started</span>} />
                     <div style={{
                         background: 'rgba(255,255,255,0.02)',
                         border: '1px solid var(--glass-border)',
@@ -406,7 +435,10 @@ export default function Help({ user }) {
                     }}>
                         {/* Progress bar */}
                         <div style={{ marginBottom: 18 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 7, fontSize: 12 }}>
+                            <div style={{
+                                display: 'flex', justifyContent: 'space-between',
+                                marginBottom: 7, fontSize: 12,
+                            }}>
                                 <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
                                     Setup Progress
                                 </span>
@@ -414,7 +446,7 @@ export default function Help({ user }) {
                                     fontWeight: 700,
                                     color: checkPct === 100 ? 'var(--green-t)' : roleInfo.color,
                                 }}>
-                                    {checkPct}% {checkPct === 100 ? '🎉' : ''}
+                                    {checkPct}% {checkPct === 100 && <Star size={12} style={{ marginLeft: 4 }} />}
                                 </span>
                             </div>
                             <div style={{
@@ -431,6 +463,7 @@ export default function Help({ user }) {
                                 }} />
                             </div>
                         </div>
+
                         {/* Items */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                             {CHECKLIST.map(item => {
@@ -439,15 +472,23 @@ export default function Help({ user }) {
                                     <div
                                         key={item.id}
                                         onClick={() => toggleCheck(item.id)}
+                                        role="checkbox"
+                                        aria-checked={done}
+                                        tabIndex={0}
+                                        onKeyDown={e => e.key === 'Enter' && toggleCheck(item.id)}
                                         style={{
                                             display: 'flex', alignItems: 'center', gap: 12,
                                             padding: '9px 12px', borderRadius: 10, cursor: 'pointer',
-                                            background: done ? `${roleInfo.color}0c` : 'rgba(255,255,255,0.02)',
-                                            border: `1px solid ${done ? roleInfo.color + '30' : 'var(--glass-border)'}`,
+                                            background: done ? `${roleInfo.color}10` : 'var(--bg-input)',
+                                            border: `1px solid ${done ? roleInfo.color + '40' : 'var(--border)'}`,
                                             transition: 'all 0.2s',
                                         }}
-                                        onMouseEnter={e => !done && (e.currentTarget.style.background = 'var(--bg-hover)')}
-                                        onMouseLeave={e => !done && (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
+                                        onMouseEnter={e => {
+                                            if (!done) e.currentTarget.style.background = 'var(--bg-hover)';
+                                        }}
+                                        onMouseLeave={e => {
+                                            if (!done) e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                                        }}
                                     >
                                         <div style={{
                                             width: 20, height: 20, borderRadius: 6, flexShrink: 0,
@@ -456,9 +497,13 @@ export default function Help({ user }) {
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             transition: 'all 0.2s',
                                         }}>
-                                            {done && <span style={{ color: '#fff', fontSize: 11, lineHeight: 1 }}>✓</span>}
+                                            {done && (
+                                                <span style={{ color: '#fff', fontSize: 11, lineHeight: 1 }}>
+                                                    ✓
+                                                </span>
+                                            )}
                                         </div>
-                                        <span style={{ fontSize: 16 }}>{item.icon}</span>
+                                        <item.Icon size={18} />
                                         <span style={{
                                             fontSize: 13, fontWeight: 500,
                                             color: done ? 'var(--text-muted)' : 'var(--text-primary)',
@@ -475,11 +520,15 @@ export default function Help({ user }) {
                 </section>
             )}
 
-            {/* ── Feature Guide ─────────────────────────────── */}
-            <section style={{ marginBottom: 40 }} id="features">
-                <SectionHeader id="features" title="🗺️ Feature Guide" />
+            {/* ── Feature Guide ────────────────────────────── */}
+            <section style={{ marginBottom: 40 }}>
+                <SectionHeader id="features" title={<span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Map size={16} /> Feature Guide</span>} />
+
                 {search && filteredFeatures.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-muted)', fontSize: 14 }}>
+                    <div style={{
+                        textAlign: 'center', padding: '32px 0',
+                        color: 'var(--text-muted)', fontSize: 14,
+                    }}>
                         No features match "{search}"
                     </div>
                 ) : (
@@ -490,59 +539,79 @@ export default function Help({ user }) {
                             return (
                                 <div
                                     key={f.path}
-                                    onClick={() => setActiveFeature(isOpen ? null : i)}
+                                    onClick={() => toggleFeature(i)}
+                                    role="button"
+                                    aria-expanded={isOpen}
+                                    aria-controls={`feature-desc-${i}`}
                                     style={{
                                         background: 'rgba(255,255,255,0.02)',
-                                        border: `1px solid ${isOpen ? displayRole.color + '55' : 'var(--glass-border)'}`,
-                                        borderRadius: 12, padding: '14px 16px', cursor: 'pointer',
-                                        transition: 'all 0.22s ease',
-                                        boxShadow: isOpen ? `0 0 0 1px ${displayRole.color}18` : 'none',
+                                        border: `1px solid ${isOpen
+                                            ? displayRole.color + '55'
+                                            : 'var(--glass-border)'}`,
+                                        borderRadius: 12, padding: '14px 16px',
+                                        cursor: 'pointer', transition: 'all 0.22s ease',
+                                        boxShadow: isOpen
+                                            ? `0 0 0 1px ${displayRole.color}18`
+                                            : 'none',
                                     }}
-                                    onMouseEnter={e => !isOpen && (e.currentTarget.style.background = 'var(--bg-hover)')}
-                                    onMouseLeave={e => !isOpen && (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
+                                    onMouseEnter={e => {
+                                        if (!isOpen)
+                                            e.currentTarget.style.background = 'var(--bg-hover)';
+                                    }}
+                                    onMouseLeave={e => {
+                                        if (!isOpen)
+                                            e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                                    }}
                                 >
+                                    {/* Header row */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                         <div style={{
                                             width: 40, height: 40, borderRadius: 10, flexShrink: 0,
                                             background: isOpen
                                                 ? `linear-gradient(135deg, ${displayRole.color}30, ${displayRole.color}15)`
                                                 : 'rgba(255,255,255,0.05)',
-                                            border: `1px solid ${isOpen ? displayRole.color + '40' : 'var(--glass-border)'}`,
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontSize: 20, transition: 'all 0.2s',
+                                            border: `1px solid ${isOpen
+                                                ? displayRole.color + '40'
+                                                : 'var(--glass-border)'}`,
+                                            display: 'flex', alignItems: 'center',
+                                            justifyContent: 'center', fontSize: 20,
+                                            transition: 'all 0.2s',
                                         }}>
-                                            {f.icon}
+                                            <f.Icon size={20} strokeWidth={2.5} color={isOpen ? displayRole.color : 'var(--text-muted)'} aria-hidden="true" />
                                         </div>
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                                                <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>
+                                            <div style={{
+                                                display: 'flex', alignItems: 'center',
+                                                gap: 8, marginBottom: 3,
+                                            }}>
+                                                <span style={{
+                                                    fontWeight: 700, fontSize: 14,
+                                                    color: 'var(--text-primary)',
+                                                }}>
                                                     {f.name}
                                                 </span>
                                                 {isRoleFeature && (
                                                     <span style={{
-                                                        fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
-                                                        background: `${displayRole.color}20`, color: displayRole.color,
+                                                        fontSize: 9, fontWeight: 700,
+                                                        padding: '1px 6px', borderRadius: 99,
+                                                        background: `${displayRole.color}20`,
+                                                        color: displayRole.color,
                                                         border: `1px solid ${displayRole.color}35`,
-                                                        textTransform: 'uppercase', letterSpacing: '0.07em',
+                                                        textTransform: 'uppercase',
+                                                        letterSpacing: '0.07em',
                                                     }}>
                                                         your role
                                                     </span>
                                                 )}
                                             </div>
-                                            <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                                            <div id={`feature-desc-${i}`} style={{
+                                                fontSize: 12, color: 'var(--text-muted)',
+                                                lineHeight: 1.5,
+                                            }}>
                                                 {f.desc}
                                             </div>
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-                                            <span style={{
-                                                color: isOpen ? displayRole.color : 'var(--text-muted)',
-                                                fontSize: 11, transition: 'transform 0.2s, color 0.2s',
-                                                transform: isOpen ? 'rotate(180deg)' : 'none',
-                                                display: 'inline-block',
-                                            }}>
-                                                ▼
-                                            </span>
-                                        </div>
+                                        <ChevronDown size={14} aria-hidden="true" style={{ transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'none' }} />
                                     </div>
 
                                     {/* Expanded tips */}
@@ -555,30 +624,40 @@ export default function Help({ user }) {
                                             <div style={{
                                                 fontSize: 10, fontWeight: 700,
                                                 color: 'var(--text-muted)',
-                                                textTransform: 'uppercase', letterSpacing: '0.7px',
-                                                marginBottom: 10,
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.7px', marginBottom: 10,
                                             }}>
                                                 Tips
                                             </div>
                                             {f.tips.map((tip, j) => (
                                                 <div key={j} style={{
-                                                    display: 'flex', gap: 10, alignItems: 'flex-start',
+                                                    display: 'flex', gap: 10,
+                                                    alignItems: 'flex-start',
                                                     marginBottom: j < f.tips.length - 1 ? 8 : 0,
                                                     padding: '7px 10px',
                                                     background: `${displayRole.color}08`,
                                                     borderRadius: 8,
                                                     border: `1px solid ${displayRole.color}15`,
                                                 }}>
-                                                    <span style={{ color: displayRole.color, fontWeight: 700, flexShrink: 0, lineHeight: 1.6 }}>→</span>
-                                                    <span style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{tip}</span>
+                                                    <ArrowRight size={14} style={{ marginTop: 2 }} />
+                                                    <span style={{
+                                                        fontSize: 12,
+                                                        color: 'var(--text-secondary)',
+                                                        lineHeight: 1.6,
+                                                    }}>
+                                                        {tip}
+                                                    </span>
                                                 </div>
                                             ))}
                                             <button
                                                 className="btn btn-secondary btn-sm"
                                                 style={{ marginTop: 12 }}
-                                                onClick={e => { e.stopPropagation(); navigate(f.path); }}
+                                                onClick={e => {
+                                                    e.stopPropagation();
+                                                    navigate(f.path);
+                                                }}
                                             >
-                                                Open {f.name} →
+                                                Open {f.name} <ArrowRight size={12} />
                                             </button>
                                         </div>
                                     )}
@@ -589,29 +668,36 @@ export default function Help({ user }) {
                 )}
             </section>
 
-            {/* ── FAQ ───────────────────────────────────────── */}
-            <section style={{ marginBottom: 40 }} id="faq">
-                <SectionHeader id="faq" title="❓ Frequently Asked Questions" />
+            {/* ── FAQ ─────────────────────────────────────── */}
+            <section style={{ marginBottom: 40 }}>
+                <SectionHeader id="faq" title={<span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><HelpCircle size={16} /> Frequently Asked Questions</span>} />
+
                 {search && filteredFaqs.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)', fontSize: 14 }}>
+                    <div style={{
+                        textAlign: 'center', padding: '24px 0',
+                        color: 'var(--text-muted)', fontSize: 14,
+                    }}>
                         No FAQs match "{search}"
                     </div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {/* FIX: use faq.q as stable key — index keys break animation on filter */}
                         {filteredFaqs.map((faq, i) => {
                             const isOpen = openFaq === i;
                             return (
                                 <div
-                                    key={i}
+                                    key={faq.q}
                                     style={{
                                         background: 'rgba(255,255,255,0.02)',
-                                        border: `1px solid ${isOpen ? displayRole.color + '45' : 'var(--glass-border)'}`,
+                                        border: `1px solid ${isOpen
+                                            ? displayRole.color + '45'
+                                            : 'var(--glass-border)'}`,
                                         borderRadius: 11, overflow: 'hidden',
                                         transition: 'border-color 0.2s',
                                     }}
                                 >
                                     <button
-                                        onClick={() => setOpenFaq(isOpen ? null : i)}
+                                        onClick={() => toggleFaq(i)}
                                         style={{
                                             width: '100%', padding: '12px 16px',
                                             background: 'none', border: 'none',
@@ -620,22 +706,22 @@ export default function Help({ user }) {
                                             cursor: 'pointer', textAlign: 'left', gap: 12,
                                         }}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
-                                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                                        <div style={{
+                                            display: 'flex', alignItems: 'center',
+                                            gap: 10, flex: 1, minWidth: 0,
+                                        }}>
+                                            <span style={{
+                                                fontSize: 13, fontWeight: 600,
+                                                color: 'var(--text-primary)',
+                                                flex: 1,
+                                            }}>
                                                 {faq.q}
                                             </span>
                                             <TagPill tag={faq.tag} />
                                         </div>
-                                        <span style={{
-                                            color: isOpen ? displayRole.color : 'var(--text-muted)',
-                                            fontSize: 18, flexShrink: 0,
-                                            transition: 'transform 0.22s, color 0.2s',
-                                            transform: isOpen ? 'rotate(45deg)' : 'none',
-                                            display: 'inline-block', lineHeight: 1,
-                                        }}>
-                                            +
-                                        </span>
+                                        <Plus size={18} />
                                     </button>
+
                                     {isOpen && (
                                         <div style={{
                                             padding: '0 16px 16px',
@@ -661,7 +747,7 @@ export default function Help({ user }) {
                 )}
             </section>
 
-            {/* ── Support callout ───────────────────────────── */}
+            {/* ── Support callout ─────────────────────────── */}
             <div
                 id="support"
                 style={{
@@ -672,23 +758,28 @@ export default function Help({ user }) {
                 }}
             >
                 <div style={{
-                    width: 52, height: 52, flexShrink: 0,
-                    borderRadius: 14,
+                    width: 52, height: 52, flexShrink: 0, borderRadius: 14,
                     background: `linear-gradient(135deg, ${roleInfo.color}50, ${roleInfo.color}25)`,
                     border: `1px solid ${roleInfo.color}40`,
                     display: 'flex', alignItems: 'center',
                     justifyContent: 'center', fontSize: 26,
                 }}>
-                    💬
+                    <MessageSquare size={26} color="#fff" />
                 </div>
                 <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', marginBottom: 5 }}>
+                    <div style={{
+                        fontWeight: 700, fontSize: 14,
+                        color: 'var(--text-primary)', marginBottom: 5,
+                    }}>
                         Still stuck?
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
                         Re-open the interactive onboarding tour from the{' '}
-                        <strong style={{ color: 'var(--text-secondary)' }}>❓ Help &amp; Feature Guide</strong>
-                        {' '}button in the sidebar — it walks through your role, feature map and all tips step by step.
+                        <strong style={{ color: 'var(--text-secondary)' }}>
+                            <HelpCircle size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Help &amp; Feature Guide
+                        </strong>
+                        {' '}button in the sidebar — it walks through your role, feature map
+                        and all tips step by step.
                     </div>
                 </div>
                 <button
@@ -699,6 +790,7 @@ export default function Help({ user }) {
                     Go to Dashboard
                 </button>
             </div>
+
         </div>
     );
 }

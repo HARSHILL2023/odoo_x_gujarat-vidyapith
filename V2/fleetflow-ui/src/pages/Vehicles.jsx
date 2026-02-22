@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useFleet } from '../context/FleetContext';
 import StatusBadge from '../components/StatusBadge';
@@ -6,6 +6,13 @@ import Modal from '../components/Modal';
 import SkeletonTable from '../components/SkeletonTable';
 import useCountUp from '../hooks/useCountUp';
 import { showToast } from '../hooks/useToast';
+import {
+    LayoutGrid, List, Plus, Search,
+    Filter, MoreHorizontal, Truck, CheckCircle2,
+    Map, Wrench, MapPin, Edit2, Trash2,
+    Bike, Bus, Package, Slash, AlertCircle,
+    Archive, Navigation, HelpCircle
+} from 'lucide-react';
 
 /* ─── Constants ───────────────────────────────────────────── */
 const EMPTY = {
@@ -14,43 +21,63 @@ const EMPTY = {
 };
 
 const STATUS_META = {
-    available: { color: '#22c55e', label: 'Available', icon: '✅' },
-    on_trip:   { color: '#38bdf8', label: 'On Trip',   icon: '🚛' },
-    in_shop:   { color: '#f59e0b', label: 'In Shop',   icon: '🔧' },
-    retired:   { color: '#94a3b8', label: 'Retired',   icon: '📦' },
-    suspended: { color: '#ef4444', label: 'Suspended', icon: '🚫' },
+    available: { color: '#22c55e', label: 'Available', Icon: CheckCircle2 },
+    on_trip: { color: '#38bdf8', label: 'On Trip', Icon: Navigation },
+    in_shop: { color: '#f59e0b', label: 'In Shop', Icon: Wrench },
+    retired: { color: '#94a3b8', label: 'Retired', Icon: Archive },
+    suspended: { color: '#ef4444', label: 'Suspended', Icon: AlertCircle },
 };
 
 const TYPE_OPTS = [
-    { v: 'van',   l: '🚐 Van',   emoji: '🚐' },
-    { v: 'truck', l: '🚛 Truck', emoji: '🚛' },
-    { v: 'bike',  l: '🏍️ Bike',  emoji: '🏍️' },
+    { v: 'van', l: 'Van', Icon: Bus },
+    { v: 'truck', l: 'Truck', Icon: Truck },
+    { v: 'bike', l: 'Bike', Icon: Bike },
 ];
 
 const STATUS_OPTS = [
-    { v: 'available', l: '✅ Available' },
-    { v: 'on_trip',   l: '🚛 On Trip'  },
-    { v: 'in_shop',   l: '🔧 In Shop'  },
-    { v: 'retired',   l: '📦 Retired'  },
+    { v: 'available', l: 'Available', Icon: CheckCircle2 },
+    { v: 'on_trip', l: 'On Trip', Icon: Navigation },
+    { v: 'in_shop', l: 'In Shop', Icon: Wrench },
+    { v: 'retired', l: 'Retired', Icon: Archive },
 ];
 
 const SORT_OPTS = [
-    { v: 'name',         l: 'Name A–Z'       },
-    { v: 'capacity_desc',l: 'Capacity ↓'     },
-    { v: 'odometer_desc',l: 'Odometer ↓'     },
-    { v: 'cost_desc',    l: 'Acq. Cost ↓'    },
-    { v: 'status',       l: 'Status'         },
+    { v: 'name', l: 'Name A–Z' },
+    { v: 'capacity_desc', l: 'Capacity ↓' },
+    { v: 'odometer_desc', l: 'Odometer ↓' },
+    { v: 'cost_desc', l: 'Acq. Cost ↓' },
+    { v: 'status', l: 'Status' },
 ];
 
 const sid = val => String(val?._id ?? val ?? '');
-const typeEmoji = t => TYPE_OPTS.find(o => o.v === t)?.emoji ?? '🚗';
+const getVehicleIcon = t => {
+    const opt = TYPE_OPTS.find(o => o.v === t);
+    return opt ? <opt.Icon size={16} /> : <Truck size={16} />;
+};
+
+function VehicleTypeBadge({ type }) {
+    const Icon = TYPE_OPTS.find(o => o.v === type)?.Icon ?? Truck;
+    return (
+        <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            fontSize: 11, fontWeight: 600,
+            padding: '3px 9px', borderRadius: 999,
+            background: 'rgba(255,255,255,0.06)',
+            color: 'var(--text-secondary)',
+            border: '1px solid var(--glass-border)',
+            textTransform: 'capitalize',
+        }}>
+            <Icon size={12} /> {type}
+        </span>
+    );
+}
 
 /* ─── Inline capacity bar ─────────────────────────────────── */
 function CapBar({ value, max, label = true }) {
     const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
     const color = pct > 90 ? '#22c55e' : pct > 60 ? '#38bdf8' : '#94a3b8';
     return (
-        <div style={{ minWidth: 90 }}>
+        <div aria-label={`Storage capacity: ${value} of ${max} kg (${pct}%)`} style={{ minWidth: 90 }}>
             {label && (
                 <div style={{
                     display: 'flex', justifyContent: 'space-between',
@@ -78,9 +105,9 @@ function CapBar({ value, max, label = true }) {
 /* ─── Vehicle Card (Grid) ─────────────────────────────────── */
 function VehicleCard({ vehicle, maxCapFleet, onEdit, onRetire }) {
     const [confirmRetire, setConfirmRetire] = useState(false);
-    const cap  = vehicle.maxCapacity ?? vehicle.max_capacity ?? 0;
+    const cap = vehicle.maxCapacity ?? vehicle.max_capacity ?? 0;
     const meta = STATUS_META[vehicle.status] ?? STATUS_META.available;
-    const acq  = vehicle.acquisition_cost ?? vehicle.acquisitionCost ?? 0;
+    const acq = vehicle.acquisition_cost ?? vehicle.acquisitionCost ?? 0;
 
     return (
         <div
@@ -113,11 +140,11 @@ function VehicleCard({ vehicle, maxCapFleet, onEdit, onRetire }) {
             <div style={{ padding: '18px 16px 16px', position: 'relative' }}>
                 {/* Type emoji */}
                 <div style={{
-                    fontSize: 40, textAlign: 'center',
-                    marginBottom: 10, lineHeight: 1,
+                    display: 'flex', justifyContent: 'center',
+                    marginBottom: 10, color: meta.color,
                     filter: `drop-shadow(0 2px 8px ${meta.color}40)`,
                 }}>
-                    {typeEmoji(vehicle.type)}
+                    {getVehicleIcon(vehicle.type)}
                 </div>
 
                 {/* Name */}
@@ -204,7 +231,7 @@ function VehicleCard({ vehicle, maxCapFleet, onEdit, onRetire }) {
                             borderRadius: 999, padding: '2px 10px',
                             textTransform: 'uppercase', letterSpacing: '0.5px',
                         }}>
-                            📍 {vehicle.region}
+                            <MapPin size={10} style={{ marginRight: 4 }} /> {vehicle.region}
                         </span>
                     </div>
                 )}
@@ -232,7 +259,7 @@ function VehicleCard({ vehicle, maxCapFleet, onEdit, onRetire }) {
                                 style={{ flex: 1 }}
                                 onClick={() => { setConfirmRetire(false); onRetire(sid(vehicle)); }}
                             >
-                                Retire
+                                <Trash2 size={12} /> Retire
                             </button>
                         </div>
                     </div>
@@ -243,7 +270,7 @@ function VehicleCard({ vehicle, maxCapFleet, onEdit, onRetire }) {
                             style={{ flex: 1, justifyContent: 'center' }}
                             onClick={() => onEdit(vehicle)}
                         >
-                            ✏ Edit
+                            <Edit2 size={12} /> Edit
                         </button>
                         {vehicle.status !== 'retired' && (
                             <button
@@ -251,7 +278,7 @@ function VehicleCard({ vehicle, maxCapFleet, onEdit, onRetire }) {
                                 style={{ flex: 1, justifyContent: 'center' }}
                                 onClick={() => setConfirmRetire(true)}
                             >
-                                📦 Retire
+                                <Archive size={12} /> Retire
                             </button>
                         )}
                     </div>
@@ -273,12 +300,12 @@ function VehiclePreview({ form }) {
             border: `1px solid ${meta.color}30`,
             borderRadius: 10,
         }}>
-            <span style={{
-                fontSize: 28,
+            <div style={{
+                color: meta.color,
                 filter: `drop-shadow(0 2px 6px ${meta.color}60)`,
             }}>
-                {typeEmoji(form.type)}
-            </span>
+                {getVehicleIcon(form.type)}
+            </div>
             <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>
                     {form.name || 'Unnamed Vehicle'}
@@ -294,7 +321,7 @@ function VehiclePreview({ form }) {
                             {form.license_plate}
                         </code>
                     )}
-                    {form.region && <span>📍 {form.region}</span>}
+                    {form.region && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={10} /> {form.region}</span>}
                 </div>
             </div>
             <div style={{
@@ -302,8 +329,9 @@ function VehiclePreview({ form }) {
                 background: `${meta.color}20`,
                 color: meta.color, fontSize: 11, fontWeight: 700,
                 border: `1px solid ${meta.color}35`,
+                display: 'flex', alignItems: 'center', gap: 6
             }}>
-                {meta.icon} {meta.label}
+                <meta.Icon size={12} /> {meta.label}
             </div>
         </div>
     );
@@ -314,14 +342,14 @@ export default function Vehicles() {
     const { vehicles, loading, addVehicle, updateVehicle, deleteVehicle } = useFleet();
     const location = useLocation();
 
-    const [viewMode, setViewMode]     = useState(() => localStorage.getItem('ff-vehicles-view') || 'table');
-    const [search, setSearch]         = useState('');
+    const [viewMode, setViewMode] = useState(() => localStorage.getItem('ff-vehicles-view') || 'table');
+    const [search, setSearch] = useState('');
     const [filterType, setFilterType] = useState('all');
     const [filterStatus, setFilterStatus] = useState('all');
-    const [sortBy, setSortBy]         = useState('name');
-    const [modal, setModal]           = useState(null);
-    const [form, setForm]             = useState(EMPTY);
-    const [editId, setEditId]         = useState(null);
+    const [sortBy, setSortBy] = useState('name');
+    const [modal, setModal] = useState(null);
+    const [form, setForm] = useState(EMPTY);
+    const [editId, setEditId] = useState(null);
     const [confirmRetireId, setConfirmRetireId] = useState(null);
 
     useEffect(() => {
@@ -329,20 +357,20 @@ export default function Vehicles() {
     }, [location.state]);
 
     const persistView = v => { setViewMode(v); localStorage.setItem('ff-vehicles-view', v); };
-    const openAdd     = () => { setForm(EMPTY); setModal('add'); };
-    const openEdit    = v  => { setForm({ ...EMPTY, ...v }); setEditId(sid(v)); setModal('edit'); };
-    const closeModal  = () => { setModal(null); setEditId(null); };
+    const openAdd = () => { setForm(EMPTY); setModal('add'); };
+    const openEdit = v => { setForm({ ...EMPTY, ...v }); setEditId(sid(v)); setModal('edit'); };
+    const closeModal = () => { setModal(null); setEditId(null); };
 
     /* ── Aggregates ───────────────────────────────────────── */
-    const availCount  = vehicles.filter(v => v.status === 'available').length;
+    const availCount = vehicles.filter(v => v.status === 'available').length;
     const onTripCount = vehicles.filter(v => v.status === 'on_trip').length;
     const inShopCount = vehicles.filter(v => v.status === 'in_shop').length;
-    const totalCount  = vehicles.length;
+    const totalCount = vehicles.length;
 
-    const animTotal  = useCountUp(totalCount);
-    const animAvail  = useCountUp(availCount);
-    const animTrip   = useCountUp(onTripCount);
-    const animShop   = useCountUp(inShopCount);
+    const animTotal = useCountUp(totalCount);
+    const animAvail = useCountUp(availCount);
+    const animTrip = useCountUp(onTripCount);
+    const animShop = useCountUp(inShopCount);
 
     const utilizationPct = totalCount > 0
         ? Math.round((onTripCount / totalCount) * 100)
@@ -353,12 +381,12 @@ export default function Vehicles() {
 
     const filtered = vehicles
         .filter(v => {
-            const q  = search.toLowerCase();
+            const q = search.toLowerCase();
             const ms = !q ||
-                (v.name         || '').toLowerCase().includes(q) ||
+                (v.name || '').toLowerCase().includes(q) ||
                 (v.license_plate || '').toLowerCase().includes(q) ||
-                (v.region       || '').toLowerCase().includes(q);
-            const mt = filterType   === 'all' || v.type   === filterType;
+                (v.region || '').toLowerCase().includes(q);
+            const mt = filterType === 'all' || v.type === filterType;
             const mf = filterStatus === 'all' || v.status === filterStatus;
             return ms && mt && mf;
         })
@@ -366,26 +394,26 @@ export default function Vehicles() {
             switch (sortBy) {
                 case 'capacity_desc': return (b.max_capacity ?? 0) - (a.max_capacity ?? 0);
                 case 'odometer_desc': return (b.odometer ?? 0) - (a.odometer ?? 0);
-                case 'cost_desc':     return (b.acquisition_cost ?? 0) - (a.acquisition_cost ?? 0);
-                case 'status':        return (a.status ?? '').localeCompare(b.status ?? '');
-                default:              return (a.name ?? '').localeCompare(b.name ?? '');
+                case 'cost_desc': return (b.acquisition_cost ?? 0) - (a.acquisition_cost ?? 0);
+                case 'status': return (a.status ?? '').localeCompare(b.status ?? '');
+                default: return (a.name ?? '').localeCompare(b.name ?? '');
             }
         });
 
     /* ── Save ─────────────────────────────────────────────── */
     const handleSave = async () => {
-        if (!form.name.trim())          { showToast({ message: 'Vehicle name is required.', type: 'error' }); return; }
+        if (!form.name.trim()) { showToast({ message: 'Vehicle name is required.', type: 'error' }); return; }
         if (!form.license_plate.trim()) { showToast({ message: 'License plate is required.', type: 'error' }); return; }
         const data = {
             ...form,
-            max_capacity:     Number(form.max_capacity)     || 0,
-            odometer:         Number(form.odometer)         || 0,
+            max_capacity: Number(form.max_capacity) || 0,
+            odometer: Number(form.odometer) || 0,
             acquisition_cost: Number(form.acquisition_cost) || 0,
         };
         try {
             if (modal === 'add') {
                 await addVehicle(data);
-                showToast({ message: 'Vehicle added! 🚛', type: 'success' });
+                showToast({ message: 'Vehicle added successfully', type: 'success' });
             } else {
                 await updateVehicle(editId, data);
                 showToast({ message: 'Vehicle updated!', type: 'success' });
@@ -411,13 +439,10 @@ export default function Vehicles() {
 
     return (
         <div className="fade-in">
-            {/* ── Page Header ───────────────────────────────── */}
-            <div className="page-header">
-                <div>
-                    <div className="page-title">Vehicle Registry</div>
-                    <div className="page-sub">
-                        {totalCount} vehicles · {utilizationPct}% utilization
-                    </div>
+            {/* ── Page Actions ────────────────────────────────── */}
+            <div className="page-header" style={{ marginBottom: 20, justifyContent: 'flex-end' }}>
+                <div className="page-sub" style={{ marginRight: 'auto' }}>
+                    {totalCount} vehicles · {utilizationPct}% utilization
                 </div>
                 <div className="page-actions">
                     {/* Filters */}
@@ -444,30 +469,25 @@ export default function Vehicles() {
                         ))}
                     </select>
                     {/* View toggle */}
-                    <div style={{
-                        display: 'flex', gap: 3,
-                        background: 'rgba(255,255,255,0.04)',
-                        border: '1px solid var(--glass-border)',
-                        borderRadius: 9, padding: 3,
-                    }}>
-                        {[['table', '☰ Table'], ['grid', '⊞ Grid']].map(([v, label]) => (
+                    <div className="ff-view-toggle">
+                        {[
+                            { v: 'table', label: 'Table', Icon: List },
+                            { v: 'grid', label: 'Grid', Icon: LayoutGrid }
+                        ].map(({ v, label, Icon }) => (
                             <button
                                 key={v}
-                                className={`btn btn-sm ${viewMode === v ? 'btn-primary' : 'btn-secondary'}`}
-                                style={{
-                                    border: 'none', borderRadius: 7, padding: '5px 12px',
-                                    background: viewMode === v ? 'var(--accent)' : 'transparent',
-                                    boxShadow: viewMode === v ? '0 2px 8px rgba(59,130,246,0.3)' : 'none',
-                                    transition: 'all 0.2s ease',
-                                }}
+                                className={`ff-view-btn ${viewMode === v ? 'active' : ''}`}
                                 onClick={() => persistView(v)}
+                                aria-label={`Switch to ${label} view`}
+                                aria-pressed={viewMode === v}
                             >
+                                <Icon size={14} aria-hidden="true" />
                                 {label}
                             </button>
                         ))}
                     </div>
-                    <button className="btn btn-primary" onClick={openAdd}>
-                        + Add Vehicle
+                    <button className="btn btn-primary" onClick={openAdd} aria-label="Add new vehicle">
+                        <Plus size={14} aria-hidden="true" /> Add Vehicle
                     </button>
                 </div>
             </div>
@@ -479,7 +499,7 @@ export default function Vehicles() {
                     style={{ animation: 'fadeInScale 0.35s ease 0ms both', cursor: 'pointer' }}
                     onClick={() => setFilterStatus('all')}
                 >
-                    <div className="kpi-icon">🚛</div>
+                    <div className="kpi-icon"><Truck size={20} strokeWidth={2} /></div>
                     <div className="kpi-label">Total Fleet</div>
                     <div className="kpi-value">{animTotal}</div>
                     <div className="kpi-sub">registered</div>
@@ -489,7 +509,7 @@ export default function Vehicles() {
                     style={{ animation: 'fadeInScale 0.35s ease 60ms both', cursor: 'pointer' }}
                     onClick={() => setFilterStatus(filterStatus === 'available' ? 'all' : 'available')}
                 >
-                    <div className="kpi-icon">✅</div>
+                    <div className="kpi-icon"><CheckCircle2 size={20} strokeWidth={2} /></div>
                     <div className="kpi-label">Available</div>
                     <div className="kpi-value">{animAvail}</div>
                     <div className="kpi-sub">ready to dispatch</div>
@@ -499,7 +519,7 @@ export default function Vehicles() {
                     style={{ animation: 'fadeInScale 0.35s ease 120ms both', cursor: 'pointer' }}
                     onClick={() => setFilterStatus(filterStatus === 'on_trip' ? 'all' : 'on_trip')}
                 >
-                    <div className="kpi-icon">🗺️</div>
+                    <div className="kpi-icon"><Map size={20} strokeWidth={2} /></div>
                     <div className="kpi-label">On Trip</div>
                     <div className="kpi-value">{animTrip}</div>
                     <div className="kpi-sub">{utilizationPct}% utilization</div>
@@ -509,7 +529,7 @@ export default function Vehicles() {
                     style={{ animation: 'fadeInScale 0.35s ease 180ms both', cursor: 'pointer' }}
                     onClick={() => setFilterStatus(filterStatus === 'in_shop' ? 'all' : 'in_shop')}
                 >
-                    <div className="kpi-icon">🔧</div>
+                    <div className="kpi-icon"><Wrench size={20} strokeWidth={2} /></div>
                     <div className="kpi-label">In Shop</div>
                     <div className="kpi-value">{animShop}</div>
                     <div className="kpi-sub">under maintenance</div>
@@ -524,7 +544,7 @@ export default function Vehicles() {
                         display: 'flex', gap: 10, alignItems: 'center', marginBottom: 16,
                     }}>
                         <div className="search-wrap" style={{ flex: 1, maxWidth: 320 }}>
-                            <span className="search-icon">🔍</span>
+                            <span className="search-icon"><Search size={14} /></span>
                             <input
                                 className="search-input"
                                 placeholder="Search vehicles…"
@@ -553,7 +573,7 @@ export default function Vehicles() {
                     }}>
                         {filtered.length === 0 ? (
                             <div className="empty-state" style={{ gridColumn: '1/-1', padding: '48px 0' }}>
-                                <div className="empty-state-icon">🚛</div>
+                                <div className="empty-state-icon"><Truck size={40} opacity={0.2} /></div>
                                 <div className="empty-state-text">
                                     {search || filterType !== 'all' || filterStatus !== 'all'
                                         ? 'No vehicles match your filters'
@@ -565,7 +585,7 @@ export default function Vehicles() {
                                         style={{ marginTop: 12 }}
                                         onClick={openAdd}
                                     >
-                                        + Add First Vehicle
+                                        <Plus size={14} /> Add First Vehicle
                                     </button>
                                 )}
                             </div>
@@ -603,7 +623,7 @@ export default function Vehicles() {
                                 ))}
                             </select>
                             <div className="search-wrap">
-                                <span className="search-icon">🔍</span>
+                                <span className="search-icon"><Search size={14} /></span>
                                 <input
                                     className="search-input"
                                     placeholder="Search name, plate, region…"
@@ -631,9 +651,9 @@ export default function Vehicles() {
                         <tbody>
                             {filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9}>
+                                    <div colSpan={9}>
                                         <div className="empty-state">
-                                            <div className="empty-state-icon">🚛</div>
+                                            <div className="empty-state-icon"><Truck size={40} opacity={0.2} /></div>
                                             <div className="empty-state-text">
                                                 {search || filterType !== 'all' || filterStatus !== 'all'
                                                     ? 'No vehicles match your filters'
@@ -645,15 +665,15 @@ export default function Vehicles() {
                                                     style={{ marginTop: 12 }}
                                                     onClick={openAdd}
                                                 >
-                                                    + Add First Vehicle
+                                                    <Plus size={14} /> Add First Vehicle
                                                 </button>
                                             )}
                                         </div>
-                                    </td>
+                                    </div>
                                 </tr>
                             ) : filtered.map(v => {
                                 const meta = STATUS_META[v.status] ?? STATUS_META.available;
-                                const acq  = v.acquisition_cost ?? 0;
+                                const acq = v.acquisition_cost ?? 0;
                                 const isRetireRow = confirmRetireId === sid(v);
                                 return (
                                     <tr
@@ -665,7 +685,7 @@ export default function Vehicles() {
                                     >
                                         <td>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                                                <span style={{ fontSize: 20 }}>{typeEmoji(v.type)}</span>
+                                                {React.createElement(TYPE_OPTS.find(o => o.v === v.type)?.Icon ?? Truck, { size: 18, style: { opacity: 0.8 } })}
                                                 <div>
                                                     <div style={{ fontWeight: 700, fontSize: 13 }}>{v.name}</div>
                                                 </div>
@@ -683,16 +703,7 @@ export default function Vehicles() {
                                             </code>
                                         </td>
                                         <td>
-                                            <span style={{
-                                                fontSize: 11, fontWeight: 600,
-                                                padding: '3px 9px', borderRadius: 999,
-                                                background: 'rgba(255,255,255,0.06)',
-                                                color: 'var(--text-secondary)',
-                                                border: '1px solid var(--glass-border)',
-                                                textTransform: 'capitalize',
-                                            }}>
-                                                {typeEmoji(v.type)} {v.type}
-                                            </span>
+                                            <VehicleTypeBadge type={v.type} />
                                         </td>
                                         <td style={{ minWidth: 110 }}>
                                             <CapBar
@@ -753,14 +764,14 @@ export default function Vehicles() {
                                                         className="btn btn-secondary btn-sm"
                                                         onClick={() => openEdit(v)}
                                                     >
-                                                        ✏ Edit
+                                                        <Edit2 size={12} /> Edit
                                                     </button>
                                                     {v.status !== 'retired' && (
                                                         <button
                                                             className="btn btn-danger btn-sm"
                                                             onClick={() => setConfirmRetireId(sid(v))}
                                                         >
-                                                            📦 Retire
+                                                            <Archive size={12} /> Retire
                                                         </button>
                                                     )}
                                                 </div>
@@ -777,7 +788,7 @@ export default function Vehicles() {
             {/* ── Add / Edit Modal ──────────────────────────── */}
             {modal && (
                 <Modal
-                    title={modal === 'add' ? '🚛 Register New Vehicle' : '✏ Edit Vehicle'}
+                    title={modal === 'add' ? <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Truck size={20} /> Register New Vehicle</span> : <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Edit2 size={18} /> Edit Vehicle</span>}
                     onClose={closeModal}
                     footer={<>
                         <button className="btn btn-secondary" onClick={closeModal}>Cancel</button>

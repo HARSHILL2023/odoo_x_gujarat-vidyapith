@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { FleetProvider } from './context/FleetContext';
 import { get, clearToken } from './api';
@@ -6,17 +6,35 @@ import WelcomeModal from './components/WelcomeModal';
 import ToastContainer from './components/ToastContainer';
 import CommandPalette from './components/CommandPalette';
 import QuickActionFAB from './components/QuickActionFAB';
+import { Command, Moon, Sun, Loader2 } from 'lucide-react';
 
 import Sidebar from './components/Sidebar';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Vehicles from './pages/Vehicles';
-import Drivers from './pages/Drivers';
-import Trips from './pages/Trips';
-import Maintenance from './pages/Maintenance';
-import FuelLogs from './pages/FuelLogs';
-import Analytics from './pages/Analytics';
-import Help from './pages/Help';
+
+/* ─── Lazy load pages for performance (Code Splitting) ─────── */
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Vehicles = lazy(() => import('./pages/Vehicles'));
+const Drivers = lazy(() => import('./pages/Drivers'));
+const Trips = lazy(() => import('./pages/Trips'));
+const Maintenance = lazy(() => import('./pages/Maintenance'));
+const FuelLogs = lazy(() => import('./pages/FuelLogs'));
+const Analytics = lazy(() => import('./pages/Analytics'));
+const Help = lazy(() => import('./pages/Help'));
+
+/* ─── Generic Page Loading Wrapper ─────────────────────────── */
+function PageLoading() {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      height: '100%', width: '100%', minHeight: 'calc(100vh - 120px)', gap: 12, color: 'var(--text-muted)'
+    }}>
+      <div style={{ width: 32, height: 32 }}>
+        <Loader2 className="spinning" size={32} />
+      </div>
+      <span style={{ fontSize: 13, fontWeight: 500, letterSpacing: '0.5px' }}>Loading workspace...</span>
+    </div>
+  );
+}
 
 const PAGE_TITLES = {
   '/dashboard': { title: 'Command Center', sub: 'Real-time fleet overview' },
@@ -35,91 +53,73 @@ function AppShell({ user, onLogout, theme, toggleTheme, onShowHelp }) {
   const meta = PAGE_TITLES[location.pathname] || {};
 
   return (
-    <div className="app-shell">
-      <Sidebar user={user} onLogout={onLogout} onShowHelp={onShowHelp} />
-      <div className="app-main">
-        <header className="header">
-          <div>
-            <div className="header-title">{meta.title}</div>
-            <div className="header-subtitle">{meta.sub}</div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {/* Ctrl+K hint chip */}
-            <span
-              style={{
-                fontSize: 11,
-                color: 'var(--text-muted)',
-                background: 'var(--bg-hover)',
-                padding: '4px 10px',
-                borderRadius: 6,
-                border: '1px solid var(--border)',
-                letterSpacing: '0.5px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                cursor: 'pointer',
-              }}
-              title="Open Command Palette (Ctrl+K)"
-            >
-              <span>⌘K</span>
-            </span>
-
-            {/* Theme toggle */}
-            <button
-              onClick={toggleTheme}
-              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              style={{
-                background: 'var(--bg-hover)',
-                border: '1px solid var(--border)',
-                borderRadius: 8,
-                padding: '5px 10px',
-                fontSize: 16,
-                cursor: 'pointer',
-                color: 'var(--text-primary)',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              {theme === 'dark' ? '☀️' : '🌙'}
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                {theme === 'dark' ? 'Light' : 'Dark'}
+    <>
+      <div className="app-shell">
+        <Sidebar user={user} onLogout={onLogout} onShowHelp={onShowHelp} />
+        <div className="app-main">
+          <header className="header">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <div className="header-subtitle" style={{ textTransform: 'uppercase', letterSpacing: '0.8px', fontSize: 10, fontWeight: 700 }}>
+                {meta.sub}
+              </div>
+              <h1 className="header-title" style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>
+                {meta.title}
+              </h1>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {/* Ctrl+K hint chip */}
+              <span
+                className="shortcut-chip"
+                aria-label="Open Command Palette (Ctrl+K)"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true })); } }}
+              >
+                <Command size={12} strokeWidth={2.5} aria-hidden="true" />
+                <span style={{ marginTop: 1 }}>K</span>
               </span>
-            </button>
 
-            <span style={{
-              fontSize: 11,
-              color: 'var(--text-muted)',
-              background: 'var(--bg-hover)',
-              padding: '4px 10px',
-              borderRadius: 6,
-              border: '1px solid var(--border)',
-            }}>
-              {user?.role}
-            </span>
-          </div>
-        </header>
+              {/* Theme toggle */}
+              <button
+                onClick={toggleTheme}
+                aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {theme === 'dark' ? <Sun size={13} strokeWidth={2.5} aria-hidden="true" /> : <Moon size={13} strokeWidth={2.5} aria-hidden="true" />}
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 700, flex: 1, textAlign: 'left', marginLeft: 2 }}>
+                  {theme === 'dark' ? 'Light' : 'Dark'}
+                </span>
+              </button>
 
-        <main className="page-content fade-in">
-          <Routes>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/vehicles" element={<Vehicles />} />
-            <Route path="/drivers" element={<Drivers />} />
-            <Route path="/trips" element={<Trips />} />
-            <Route path="/maintenance" element={<Maintenance />} />
-            <Route path="/fuel" element={<FuelLogs />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/help" element={<Help user={user} />} />
-            <Route path="*" element={<Navigate to="/dashboard" />} />
-          </Routes>
-        </main>
+              <span className="role-badge">
+                {user?.role?.replace('_', ' ')}
+              </span>
+            </div>
+          </header>
+
+          <main className="page-content fade-in">
+            <Suspense fallback={<PageLoading />}>
+              <Routes>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/vehicles" element={<Vehicles />} />
+                <Route path="/drivers" element={<Drivers />} />
+                <Route path="/trips" element={<Trips />} />
+                <Route path="/maintenance" element={<Maintenance />} />
+                <Route path="/fuel" element={<FuelLogs />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/help" element={<Help user={user} />} />
+                <Route path="*" element={<Navigate to="/dashboard" />} />
+              </Routes>
+            </Suspense>
+          </main>
+        </div>
       </div>
 
       {/* Global overlays rendered inside the router so useNavigate works */}
-      <CommandPalette />
+      < CommandPalette />
       <QuickActionFAB />
-    </div>
+    </>
   );
 }
 
@@ -156,7 +156,14 @@ export default function App() {
     }
   }, []);
 
-  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+  const toggleTheme = () => {
+    // Suppress transitions during theme switch to prevent lag
+    document.body.classList.add('no-transition');
+    setTheme(t => t === 'dark' ? 'light' : 'dark');
+    setTimeout(() => {
+      document.body.classList.remove('no-transition');
+    }, 120);
+  };
 
   const handleLogin = (userData) => {
     setUser(userData);
@@ -180,24 +187,26 @@ export default function App() {
       <ToastContainer />
 
       <BrowserRouter>
-        {user ? (
-          <>
-            <AppShell
-              user={user}
-              onLogout={handleLogout}
-              theme={theme}
-              toggleTheme={toggleTheme}
-              onShowHelp={() => setShowWelcome(true)}
-            />
-            {showWelcome && (
-              <WelcomeModal user={user} onClose={() => setShowWelcome(false)} />
-            )}
-          </>
-        ) : (
-          <Routes>
-            <Route path="*" element={<Login onLogin={handleLogin} />} />
-          </Routes>
-        )}
+        <Suspense fallback={<PageLoading />}>
+          {user ? (
+            <>
+              <AppShell
+                user={user}
+                onLogout={handleLogout}
+                theme={theme}
+                toggleTheme={toggleTheme}
+                onShowHelp={() => setShowWelcome(true)}
+              />
+              {showWelcome && (
+                <WelcomeModal user={user} onClose={() => setShowWelcome(false)} />
+              )}
+            </>
+          ) : (
+            <Routes>
+              <Route path="*" element={<Login onLogin={handleLogin} />} />
+            </Routes>
+          )}
+        </Suspense>
       </BrowserRouter>
     </FleetProvider>
   );

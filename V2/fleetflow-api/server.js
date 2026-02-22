@@ -64,13 +64,13 @@ app.get('/health', (_req, res) => {
 });
 
 // ─── Routes ─────────────────────────────────────────────────
-app.use('/api/auth',        require('./routes/auth'));
-app.use('/api/vehicles',    require('./routes/vehicles'));
-app.use('/api/drivers',     require('./routes/drivers'));
-app.use('/api/trips',       require('./routes/trips'));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/vehicles', require('./routes/vehicles'));
+app.use('/api/drivers', require('./routes/drivers'));
+app.use('/api/trips', require('./routes/trips'));
 app.use('/api/maintenance', require('./routes/maintenance'));
-app.use('/api/fuel-logs',   require('./routes/fuel'));
-app.use('/api/analytics',   require('./routes/analytics'));
+app.use('/api/fuel-logs', require('./routes/fuel'));
+app.use('/api/analytics', require('./routes/analytics'));
 
 // ─── 404 Handler ────────────────────────────────────────────
 app.use((_req, res) => {
@@ -80,7 +80,10 @@ app.use((_req, res) => {
 // ─── Global Error Handler ───────────────────────────────────
 app.use((err, _req, res, _next) => {
     console.error('Unhandled error:', err);
-    res.status(500).json({ error: 'Internal server error.' });
+    res.status(err.status || 500).json({
+        error: err.message || 'Internal server error.',
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
 });
 
 // ─── Start Server ───────────────────────────────────────────

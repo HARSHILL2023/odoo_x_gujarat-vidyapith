@@ -143,7 +143,7 @@ const QUICK_LINKS = [
    ════════════════════════════════════════════════════════════ */
 
 /* ── NotifCard ─────────────────────────────────────────────── */
-function NotifCard({ Icon, color, name, time, desc }) {
+function NotifCard({ Icon: NotifIcon, color, name, time, desc }) {
     return (
         <figure
             className="ff-help-card"
@@ -161,7 +161,7 @@ function NotifCard({ Icon, color, name, time, desc }) {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     position: 'relative', boxShadow: `0 4px 12px ${color}40`,
                 }}>
-                    <Icon size={19} color="#fff" strokeWidth={2.5} aria-hidden="true" />
+                    <NotifIcon size={19} color="#fff" strokeWidth={2.5} aria-hidden="true" />
                 </div>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -389,7 +389,7 @@ export default function Help({ user }) {
             {/* ── Quick Jump nav ───────────────────────────── */}
             {!search && (
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 32 }}>
-                    {QUICK_LINKS.map(({ href, label, Icon: QuickIcon }) => (
+                    {QUICK_LINKS.map(({ href, label, Icon: NavIcon }) => (
                         <a
                             key={href}
                             href={href}
@@ -405,7 +405,7 @@ export default function Help({ user }) {
                                 e.currentTarget.style.background = 'var(--bg-input)';
                             }}
                         >
-                            <QuickIcon size={14} strokeWidth={2.5} /> {label}
+                            <NavIcon size={14} strokeWidth={2.5} /> {label}
                         </a>
                     ))}
                 </div>

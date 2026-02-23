@@ -105,7 +105,7 @@ const PulseDot = memo(function PulseDot({ color = 'var(--green-t)' }) {
 });
 
 /* ── QuickAction ───────────────────────────────────────────── */
-const QuickAction = memo(function QuickAction({ Icon, label, onClick, color = 'var(--accent)' }) {
+const QuickAction = memo(function QuickAction({ Icon: ActionIcon, label, onClick, color = 'var(--accent)' }) {
     return (
         <button
             onClick={onClick}
@@ -136,7 +136,7 @@ const QuickAction = memo(function QuickAction({ Icon, label, onClick, color = 'v
                 el.style.boxShadow = 'none';
             }}
         >
-            <Icon size={22} aria-hidden="true" />
+            <ActionIcon size={22} aria-hidden="true" />
             <span style={{ fontSize: 11, fontWeight: 600, textAlign: 'center', lineHeight: 1.3 }}>
                 {label}
             </span>
@@ -423,7 +423,7 @@ export default function Dashboard() {
             </div>
 
             {/* ── KPI Cards ───────────────────────────────── */}
-            <div className="kpi-grid" style={{ marginBottom: 20 }}>
+            <div className="kpi-grid stagger-grid" style={{ marginBottom: 20 }}>
                 <div
                     className="kpi-card blue ff-card fade-in-scale"
                     style={{ cursor: 'pointer', animationDelay: '0ms' }}
@@ -711,7 +711,7 @@ export default function Dashboard() {
                 }}>
                     Quick Actions
                 </div>
-                <div className="quick-actions-grid">
+                <div className="quick-actions-grid stagger-grid">
                     <QuickAction Icon={Truck} label="New Trip"
                         onClick={() => navigate('/trips')} color="var(--blue-t)" />
                     <QuickAction Icon={User} label="Add Driver"

@@ -183,7 +183,7 @@ function ExportDropdown({ onTrips, onFuel, onMaintenance, onROI }) {
                     boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
                     animation: 'ff-dropdown-in 0.14s cubic-bezier(0.16,1,0.3,1) both',
                 }}>
-                    {items.map(({ label, icon: Icon, action }) => (
+                    {items.map(({ label, icon: ExportIcon, action }) => (
                         <button
                             key={label}
                             onClick={() => { action(); setOpen(false); }}
@@ -203,7 +203,7 @@ function ExportDropdown({ onTrips, onFuel, onMaintenance, onROI }) {
                                 e.currentTarget.style.color = 'var(--text-secondary)';
                             }}
                         >
-                            <Icon size={14} strokeWidth={2} style={{ flexShrink: 0 }} />
+                            <ExportIcon size={14} strokeWidth={2} style={{ flexShrink: 0 }} />
                             {label}
                         </button>
                     ))}

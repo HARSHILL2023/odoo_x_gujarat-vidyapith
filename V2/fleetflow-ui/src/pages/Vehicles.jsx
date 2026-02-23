@@ -474,7 +474,7 @@ export default function Vehicles() {
                         {[
                             { v: 'table', label: 'Table', Icon: List },
                             { v: 'grid', label: 'Grid', Icon: LayoutGrid }
-                        ].map(({ v, label, Icon }) => (
+                        ].map(({ v, label, Icon: ViewIcon }) => (
                             <button
                                 key={v}
                                 className={`ff-view-btn ${viewMode === v ? 'active' : ''}`}
@@ -482,7 +482,7 @@ export default function Vehicles() {
                                 aria-label={`Switch to ${label} view`}
                                 aria-pressed={viewMode === v}
                             >
-                                <Icon size={14} aria-hidden="true" />
+                                <ViewIcon size={14} aria-hidden="true" />
                                 {label}
                             </button>
                         ))}

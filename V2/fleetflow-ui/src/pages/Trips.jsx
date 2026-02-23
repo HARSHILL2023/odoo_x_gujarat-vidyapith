@@ -116,11 +116,11 @@ const CargoBar = memo(function CargoBar({ weight, maxCapacity }) {
 });
 
 const TripVehicleDisplay = memo(function TripVehicleDisplay({ vehicle }) {
-    const VIcon = getVehicleIcon(vehicle?.type);
+    const VehicleIcon = getVehicleIcon(vehicle?.type);
     return (
         <>
             <div style={{ fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <VIcon size={14} /> {vehicle?.name ?? '—'}
+                <VehicleIcon size={14} /> {vehicle?.name ?? '—'}
             </div>
             {vehicle?.license_plate && (
                 <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
@@ -133,7 +133,6 @@ const TripVehicleDisplay = memo(function TripVehicleDisplay({ vehicle }) {
 
 /* ── TripCard (Memoized) ────────────────────────────────────── */
 const TripCard = memo(function TripCard({ trip, vehicleMap, loadingId, colColor }) {
-    const VIcon = getVehicleIcon(vehicleMap[sid(trip.vehicle)]?.type);
     const vehicle = vehicleMap[sid(trip.vehicle)];
     const driverName = trip.driver?.name ?? '—';
     const avatar = driverAvatar(driverName);
@@ -208,7 +207,7 @@ const TripCard = memo(function TripCard({ trip, vehicleMap, loadingId, colColor 
                     display: 'flex', alignItems: 'center', gap: 5,
                     fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6,
                 }}>
-                    <VIcon size={14} />
+                    <Truck size={14} />
                     <span style={{ fontWeight: 600 }}>{vehicle.name}</span>
                     {vehicle.license_plate && (
                         <span style={{
@@ -553,7 +552,7 @@ export default function Trips() {
                 <div className="page-actions">
                     {/* View toggle */}
                     <div className="ff-view-toggle">
-                        {VIEW_TABS.map(({ key, label, Icon }) => (
+                        {VIEW_TABS.map(({ key, label, Icon: TabIcon }) => (
                             <button
                                 key={key}
                                 className={`ff-view-btn ${view === key ? 'active' : ''}`}
@@ -561,7 +560,7 @@ export default function Trips() {
                                 aria-label={`Switch to ${label} view`}
                                 aria-pressed={view === key}
                             >
-                                <Icon size={14} aria-hidden="true" />
+                                <TabIcon size={14} aria-hidden="true" />
                                 <span className="desktop-only">{label}</span>
                             </button>
                         ))}

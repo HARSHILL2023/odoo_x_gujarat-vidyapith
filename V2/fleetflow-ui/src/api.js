@@ -36,7 +36,9 @@ export async function api(path, options = {}) {
         try {
             const body = await res.json();
             message = body.error || message;
-        } catch (_) { }
+        } catch (err) {
+            console.error('Failed to parse error response:', err);
+        }
         throw new Error(message);
     }
 

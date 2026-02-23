@@ -43,9 +43,9 @@ function makeId() {
 /* ─── Default durations per type ─────────────────────────── */
 const DEFAULT_DURATION = {
     success: 3500,
-    error:   6000,
+    error: 6000,
     warning: 5000,
-    info:    4000,
+    info: 4000,
     loading: 0,     // sticky — must be dismissed manually or via update()
 };
 
@@ -58,12 +58,12 @@ const DEFAULT_DURATION = {
  * @returns {string} id — use with update() / dismiss()
  */
 function _show({
-    type     = 'info',
+    type = 'info',
     message,
     title,
     duration,
     action,
-    id       = makeId(),
+    id = makeId(),
 }) {
     const ev = Object.assign(new Event('ff-toast'), {
         detail: {
@@ -115,17 +115,17 @@ export function onToast(onShow, onUpdate, onDismiss, onDismissAll) {
     const h1 = (e) => onShow?.(e.detail);
     const h2 = (e) => onUpdate?.(e.detail);
     const h3 = (e) => onDismiss?.(e.detail);
-    const h4 = ()  => onDismissAll?.();
+    const h4 = () => onDismissAll?.();
 
-    bus.addEventListener('ff-toast',             h1);
-    bus.addEventListener('ff-toast-update',      h2);
-    bus.addEventListener('ff-toast-dismiss',     h3);
+    bus.addEventListener('ff-toast', h1);
+    bus.addEventListener('ff-toast-update', h2);
+    bus.addEventListener('ff-toast-dismiss', h3);
     bus.addEventListener('ff-toast-dismiss-all', h4);
 
     return () => {
-        bus.removeEventListener('ff-toast',             h1);
-        bus.removeEventListener('ff-toast-update',      h2);
-        bus.removeEventListener('ff-toast-dismiss',     h3);
+        bus.removeEventListener('ff-toast', h1);
+        bus.removeEventListener('ff-toast-update', h2);
+        bus.removeEventListener('ff-toast-dismiss', h3);
         bus.removeEventListener('ff-toast-dismiss-all', h4);
     };
 }
@@ -146,9 +146,9 @@ export function onToast(onShow, onUpdate, onDismiss, onDismissAll) {
 const toast = {
     /** @param {string} message @param {ToastOptions} [opts] @returns {string} id */
     success: (message, opts = {}) => _show({ type: 'success', message, ...opts }),
-    error:   (message, opts = {}) => _show({ type: 'error',   message, ...opts }),
+    error: (message, opts = {}) => _show({ type: 'error', message, ...opts }),
     warning: (message, opts = {}) => _show({ type: 'warning', message, ...opts }),
-    info:    (message, opts = {}) => _show({ type: 'info',    message, ...opts }),
+    info: (message, opts = {}) => _show({ type: 'info', message, ...opts }),
 
     /**
      * Sticky loading toast — returns id.
@@ -167,7 +167,7 @@ const toast = {
     }),
 
     /** Dismiss a specific toast by id. */
-    dismiss:    (id) => _dismiss(id),
+    dismiss: (id) => _dismiss(id),
 
     /** Dismiss every visible toast. */
     dismissAll: () => _dismissAll(),
@@ -199,9 +199,9 @@ const toast = {
                 : messages.success;
 
             toast.update(id, {
-                type:    'success',
+                type: 'success',
                 message: msg,
-                title:   messages.successTitle,
+                title: messages.successTitle,
             });
             return data;
 
@@ -211,9 +211,9 @@ const toast = {
                 : messages.error;
 
             toast.update(id, {
-                type:     'error',
-                message:  msg,
-                title:    messages.errorTitle,
+                type: 'error',
+                message: msg,
+                title: messages.errorTitle,
                 duration: 6000,
             });
             throw err;
@@ -237,16 +237,7 @@ export const { success, error, warning, info, loading, update, dismiss, dismissA
  * const { success, error, loading, promise } = useToast();
  */
 export function useToast() {
-    const success = useCallback(toast.success, []);
-    const error   = useCallback(toast.error,   []);
-    const warning = useCallback(toast.warning, []);
-    const info    = useCallback(toast.info,    []);
-    const loading = useCallback(toast.loading, []);
-    const update  = useCallback(toast.update,  []);
-    const dismiss = useCallback(toast.dismiss, []);
-    const promise = useCallback(toast.promise, []);
-
-    return { success, error, warning, info, loading, update, dismiss, dismissAll, promise };
+    return toast;
 }
 
 // ─── Backward-compat shim ─────────────────────────────────

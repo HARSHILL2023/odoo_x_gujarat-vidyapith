@@ -5,9 +5,6 @@ const connectDB = require('./db/connect');
 
 const app = express();
 
-// ─── Connect to MongoDB ─────────────────────────────────────
-connectDB();
-
 // ─── Middleware ─────────────────────────────────────────────
 const allowedOrigins = [
     process.env.CLIENT_ORIGIN,
@@ -18,12 +15,11 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
 
-        // Check if origin is in our whitelist or is a vercel.app subdomain
-        const isAllowed = allowedOrigins.includes(origin) ||
-            origin.endsWith('.vercel.app') ||
+        const isAllowed =
+            allowedOrigins.includes(origin) ||
+            /\.vercel\.app$/.test(origin) ||
             /^http:\/\/localhost:\d+$/.test(origin);
 
         if (isAllowed) {
@@ -35,9 +31,23 @@ app.use(cors({
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+
+app.options('*', cors()); // ✅ Handle preflight for ALL routes
+
 app.use(express.json());
+
+// ─── DB Middleware (per-request connection for serverless) ───
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (err) {
+        console.error('DB connection failed:', err);
+        return res.status(503).json({ error: 'Database unavailable. Please try again.' });
+    }
+});
 
 // ─── Health Check ───────────────────────────────────────────
 app.get('/', (_req, res) => {
@@ -45,7 +55,12 @@ app.get('/', (_req, res) => {
 });
 
 app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', db: 'mongodb', timestamp: new Date().toISOString() });
+    const mongoStatus = ['disconnected', 'connected', 'connecting', 'disconnecting'][require('mongoose').connection.readyState];
+    res.json({
+        status: 'ok',
+        db: mongoStatus,
+        timestamp: new Date().toISOString()
+    });
 });
 
 // ─── Routes ─────────────────────────────────────────────────
@@ -65,15 +80,29 @@ app.use((_req, res) => {
 // ─── Global Error Handler ───────────────────────────────────
 app.use((err, _req, res, _next) => {
     console.error('Unhandled error:', err);
-    res.status(500).json({ error: 'Internal server error.' });
+    res.status(err.status || 500).json({
+        error: err.message || 'Internal server error.',
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
 });
 
-// ─── Export/Start Server ──────────────────────────────────
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-    const PORT = process.env.PORT || 4000;
-    app.listen(PORT, () => {
-        console.log(`🚚 FleetFlow API running on http://localhost:${PORT}`);
-    });
+// ─── Start Server ───────────────────────────────────────────
+async function startServer() {
+    try {
+        await connectDB();
+
+        if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+            const PORT = process.env.PORT || 4000;
+            app.listen(PORT, () => {
+                console.log(`🚚 FleetFlow API running on http://localhost:${PORT}`);
+            });
+        }
+    } catch (err) {
+        console.error('❌ Failed to connect to DB on startup:', err.message);
+        // ✅ No process.exit(1) — app stays alive, DB middleware handles retries
+    }
 }
+
+startServer();
 
 module.exports = app;

@@ -4,7 +4,9 @@
  * Automatically attaches the JWT token from localStorage and
  * throws with a human-readable error message on non-2xx responses.
  */
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+// In dev, Vite proxies /api/* → http://localhost:4000 (see vite.config.js)
+// In production, set VITE_API_URL to your deployed backend URL (e.g. https://fleetflow-api.vercel.app)
+const BASE = import.meta.env.VITE_API_URL || '';
 
 function getToken() {
     return localStorage.getItem('ff-token');
@@ -34,7 +36,9 @@ export async function api(path, options = {}) {
         try {
             const body = await res.json();
             message = body.error || message;
-        } catch (_) { }
+        } catch (err) {
+            console.error('Failed to parse error response:', err);
+        }
         throw new Error(message);
     }
 

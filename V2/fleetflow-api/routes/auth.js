@@ -41,6 +41,11 @@ router.post('/login', async (req, res) => {
         return res.status(400).json({ error: 'Email and password are required.' });
 
     try {
+        if (!process.env.JWT_SECRET) {
+            console.error('❌ JWT_SECRET is not defined');
+            return res.status(500).json({ error: 'Server configuration error (JWT).' });
+        }
+
         const user = await User.findOne({ email: email.toLowerCase().trim() });
         if (!user) return res.status(401).json({ error: 'Invalid email or password.' });
 
@@ -50,10 +55,11 @@ router.post('/login', async (req, res) => {
         const payload = { id: user._id, name: user.name, email: user.email, role: user.role };
         const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' });
 
+        console.log(`✅ Login successful: ${email}`);
         res.json({ token, user: payload });
     } catch (err) {
-        console.error('Login error:', err);
-        res.status(500).json({ error: 'Server error during login.' });
+        console.error('❌ Login error:', err);
+        res.status(500).json({ error: `Server error during login: ${err.message}` });
     }
 });
 

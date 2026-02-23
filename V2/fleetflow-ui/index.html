@@ -1,13 +1,256 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>fleetflow-ui</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="FleetFlow is a modern fleet management dashboard for tracking vehicles, drivers, trips, and maintenance with real-time analytics." />
+  <meta name="keywords" content="fleet management, logistics, vehicle tracking, maintenance logs, fleet analytics" />
+  <meta name="theme-color" content="#080d17" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="application-name" content="FleetFlow" />
+  <meta name="robots" content="index, follow" />
+  <meta name="format-detection" content="telephone=no" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="FleetFlow · Modern Fleet Management" />
+  <meta property="og:description"
+    content="Real-time fleet management dashboard for vehicles, drivers, trips and analytics." />
+  <meta property="og:type" content="website" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="FleetFlow · Modern Fleet Management" />
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <link rel="apple-touch-icon" href="/vite.svg" />
+
+  <!--
+    FONT STRATEGY:
+    - Use `font-display: optional` via CSS @font-face fallbacks so fonts
+      never cause layout shift (CLS = 0).
+    - Preconnect to reduce DNS/TCP/TLS handshake time (FCP win).
+    - Load fonts as non-blocking stylesheet with media=print trick.
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- Non-blocking font load — no render blocking, no CLS -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=optional"
+    rel="stylesheet" media="print" onload="this.media='all'" />
+  <noscript>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet" />
+  </noscript>
+
+  <!-- Inline critical CSS: prevents FOUC, eliminates CLS for app shell -->
+  <style>
+    /* System font fallback stacks that closely match Space Grotesk & Inter */
+    :root {
+      background: #080d17;
+      --bg-base: #080c12;
+      --bg-surface: #0e1420;
+      --bg-card: #121926;
+      --text-primary: #e8eef6;
+      --text-muted: #5c708a;
+      /* Fallback font stacks with tight metrics to minimise CLS when web fonts load */
+      --font-heading: 'Space Grotesk', 'Arial Black', system-ui, sans-serif;
+      --font-body: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --sidebar-w: 240px;
+      --header-h: 56px;
+      --accent: #3b82f6;
+      color-scheme: dark light;
+    }
+
+    [data-theme='light'] {
+      background: #f0f4f8;
+      --bg-base: #f0f4fa;
+      --bg-surface: #ffffff;
+      --bg-card: #ffffff;
+      --text-primary: #0c1523;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 14px;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg-base, #080d17);
+      font-family: var(--font-body);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Stable app shell layout — fixes CLS by reserving space before React hydrates */
+    .app-shell {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    .ff-sb-s {
+      width: 240px;
+      background: var(--bg-card);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 768px) {
+      .ff-sb-s {
+        display: none;
+      }
+    }
+
+    .ff-sb-l {
+      padding: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 56px;
+    }
+
+    .ff-sb-m {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      flex-shrink: 0;
+    }
+
+    .app-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .header {
+      height: 56px;
+      background: var(--bg-card);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-family: var(--font-heading);
+      font-size: 14px;
+      font-weight: 800;
+      margin: 0;
+      color: var(--text-primary);
+    }
+
+    .header-sub {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    /* KPI skeleton grid reserves exact space — prevents CLS */
+    .shell-kpi {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 1024px) {
+      .shell-kpi {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .shell-kpi {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .shell-card {
+      height: 110px;
+      background: var(--bg-card);
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+  </style>
+
+  <title>FleetFlow · Modern Fleet Management</title>
+</head>
+
+<body>
+  <div id="root">
+    <!-- Static App Shell — removed by React on hydration. Reserves layout space to prevent CLS. -->
+    <div class="app-shell" id="app-shell-skeleton" aria-hidden="true">
+      <aside class="ff-sb-s">
+        <div class="ff-sb-l">
+          <div class="ff-sb-m"></div>
+          <div style="font-family:var(--font-heading);font-weight:800;font-size:15px;color:#3b82f6">FleetFlow</div>
+        </div>
+        <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:8px">
+          <div style="height:11px;width:55%;background:rgba(255,255,255,0.05);border-radius:4px;margin-bottom:8px">
+          </div>
+          <div style="height:34px;background:rgba(255,255,255,0.04);border-radius:8px"></div>
+          <div style="height:34px;background:rgba(255,255,255,0.03);border-radius:8px"></div>
+          <div style="height:34px;background:rgba(255,255,255,0.03);border-radius:8px"></div>
+          <div style="height:34px;background:rgba(255,255,255,0.03);border-radius:8px"></div>
+          <div style="height:34px;background:rgba(255,255,255,0.03);border-radius:8px"></div>
+        </div>
+      </aside>
+      <div class="app-main">
+        <header class="header">
+          <div style="display:flex;flex-direction:column">
+            <div class="header-sub">Real-time fleet overview</div>
+            <h1 class="header-title">Command Center</h1>
+          </div>
+        </header>
+        <div style="flex:1;padding:24px;background:var(--bg-base);overflow:hidden">
+          <div class="shell-kpi">
+            <div class="shell-card"></div>
+            <div class="shell-card"></div>
+            <div class="shell-card"></div>
+            <div class="shell-card"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:320px 1fr;gap:16px">
+            <div
+              style="height:280px;background:var(--bg-card);border-radius:14px;border:1px solid rgba(255,255,255,0.06)">
+            </div>
+            <div
+              style="height:280px;background:var(--bg-card);border-radius:14px;border:1px solid rgba(255,255,255,0.06)">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
 </html>
